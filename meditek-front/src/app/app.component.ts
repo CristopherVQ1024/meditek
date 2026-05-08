@@ -18,10 +18,8 @@ export class AppComponent implements OnInit {
   constructor(private router: Router) { }
 
   ngOnInit(): void {
-    // Verificar visibilidad al iniciar
     this.checkVisibility();
 
-    // Escuchar cambios de ruta
     this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
     ).subscribe(() => {

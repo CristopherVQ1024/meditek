@@ -5,7 +5,7 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"  
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -18,14 +18,45 @@ model User {
   firebaseUid String   @unique
   email       String   @unique
   name        String
-
   dni         String   @unique
   age         Int
-
+  phone       String?
   role        Role     @default(PATIENT)
-
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  
+  doctor      Doctor?
+}
+
+model Doctor {
+  id           Int       @id @default(autoincrement())
+  specialtyId  Int
+  specialty    Specialty @relation(fields: [specialtyId], references: [id])
+  specialtyName String
+  userId       Int       @unique  
+  user         User      @relation(fields: [userId], references: [id]) // ← Relación
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Specialty {
+  id          Int      @id @default(autoincrement())
+  name        String
+  icon        String
+  description String
+  doctors     Doctor[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Product {
+  id          Int       @id @default(autoincrement())
+  name        String
+  price       Float
+  stock       Int
+  description String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 enum Role {

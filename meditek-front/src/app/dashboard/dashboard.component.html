@@ -85,6 +85,7 @@
                 </button>
             </div>
 
+            <!-- En dashboard.component.html, actualiza la tabla -->
             <div class="doctors-table-container">
                 <table class="data-table">
                     <thead>
@@ -100,10 +101,10 @@
                     <tbody>
                         <tr *ngFor="let doctor of doctors">
                             <td>{{ doctor.id }}</td>
-                            <td>{{ doctor.name }}</td>
-                            <td>{{ doctor.email }}</td>
-                            <td>{{ doctor.phone }}</td>
-                            <td><span class="badge">{{ getSpecialtyName(doctor.specialtyId) }}</span></td>
+                            <td>{{ doctor.user?.name || 'Sin nombre' }}</td>
+                            <td>{{ doctor.user?.email || 'Sin email' }}</td>
+                            <td>{{ doctor.user.phone || 'Sin teléfono' }}</td> <!-- ← Solo user.phone -->
+                            <td><span class="badge">{{ doctor.specialtyName }}</span></td>
                             <td class="actions">
                                 <button class="btn-icon" (click)="openDoctorModal(doctor)" title="Editar">✏️</button>
                                 <button class="btn-icon danger" (click)="deleteDoctor(doctor.id)"
@@ -264,6 +265,10 @@
                 <input type="text" [(ngModel)]="doctorForm.name" class="form-control" placeholder="Ej: Dr. Juan Pérez">
             </div>
             <div class="form-group">
+                <label>DNI</label>
+                <input type="text" [(ngModel)]="doctorForm.dni" class="form-control" placeholder="12345678">
+            </div>
+            <div class="form-group">
                 <label>Email</label>
                 <input type="email" [(ngModel)]="doctorForm.email" class="form-control"
                     placeholder="doctor@meditek.com">
@@ -271,6 +276,10 @@
             <div class="form-group">
                 <label>Teléfono</label>
                 <input type="tel" [(ngModel)]="doctorForm.phone" class="form-control" placeholder="987654321">
+            </div>
+            <div class="form-group">
+                <label>Edad</label>
+                <input type="number" [(ngModel)]="doctorForm.age" class="form-control" placeholder="30">
             </div>
             <div class="form-group">
                 <label>Especialidad</label>

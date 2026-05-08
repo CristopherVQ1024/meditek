@@ -1,7 +1,10 @@
+// dashboard.component.ts
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient, HttpClientModule } from '@angular/common/http';
 
+// Interfaces
 interface Specialty {
   id: number;
   name: string;
@@ -12,12 +15,19 @@ interface Specialty {
 
 interface Doctor {
   id: number;
-  name: string;
-  email: string;
-  phone: string;
   specialtyId: number;
   specialtyName: string;
+  userId: number;
+  user: { 
+    id: number;
+    name: string;
+    email: string;
+    phone: string;
+    dni: string;
+    age: number;
+  };
   createdAt: string;
+  updatedAt: string;
 }
 
 interface Product {
@@ -32,62 +42,50 @@ interface Product {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, HttpClientModule],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
 })
 export class DashboardComponent implements OnInit {
-  // Variables de UI
-  activeTab: string = 'specialties'; // specialties, doctors, pharmacy, analytics
+  activeTab: string = 'specialties';
 
-  // Especialidades
   specialties: Specialty[] = [];
-  showSpecialtyModal: boolean = false;
-  editingSpecialty: Specialty | null = null;
-  specialtyForm = {
-    name: '',
-    icon: '',
-    description: ''
-  };
-
-  // Doctores
   doctors: Doctor[] = [];
+  products: Product[] = [];
+
+  showSpecialtyModal: boolean = false;
   showDoctorModal: boolean = false;
+  showProductModal: boolean = false;
+
+  editingSpecialty: Specialty | null = null;
   editingDoctor: Doctor | null = null;
+  editingProduct: Product | null = null;
+
+  specialtyForm = { name: '', icon: '', description: '' };
   doctorForm = {
     name: '',
     email: '',
     phone: '',
-    specialtyId: null as number | null
+    specialtyId: null as number | null,
+    dni: '',
+    age: null as number | null
   };
+  productForm = { name: '', price: null as number | null, stock: null as number | null, description: '' };
 
-  // Farmacia
-  products: Product[] = [];
-  showProductModal: boolean = false;
-  editingProduct: Product | null = null;
-  productForm = {
-    name: '',
-    price: null as number | null,
-    stock: null as number | null,
-    description: ''
-  };
-
-  // Analytics
   totalDoctors: number = 0;
   totalProducts: number = 0;
   totalStock: number = 0;
   totalValue: number = 0;
-
   adminName: string = 'Administrador';
 
-  // Iconos disponibles
   availableIcons = ['🏥', '❤️', '👶', '🧠', '🦷', '👁️', '🩺', '💊', '🔬', '🩻', '⚕️', '🏨'];
 
-  constructor() { }
+  private apiUrl = 'http://localhost:3000/api';
 
+  constructor(private http: HttpClient) { }
 
   ngOnInit(): void {
-    this.loadData();
+    this.loadAllData();
     this.getAdminName();
   }
 
@@ -103,73 +101,53 @@ export class DashboardComponent implements OnInit {
     }
   }
 
-  loadData(): void {
-    // Cargar especialidades
-    const storedSpecialties = localStorage.getItem('specialties');
-    if (storedSpecialties) {
-      this.specialties = JSON.parse(storedSpecialties);
-    } else {
-      // Datos iniciales
-      this.specialties = [
-        { id: 1, name: 'Medicina General', icon: '🏥', description: 'Atención primaria y chequeos preventivos', doctors: [] },
-        { id: 2, name: 'Cardiología', icon: '❤️', description: 'Cuidado especializado del corazón', doctors: [] },
-        { id: 3, name: 'Pediatría', icon: '👶', description: 'Atención integral para niños y adolescentes', doctors: [] },
-        { id: 4, name: 'Neurología', icon: '🧠', description: 'Tratamiento del sistema nervioso', doctors: [] },
-        { id: 5, name: 'Odontología', icon: '🦷', description: 'Salud dental y maxilofacial', doctors: [] },
-        { id: 6, name: 'Oftalmología', icon: '👁️', description: 'Cuidado de la visión', doctors: [] }
-      ];
-      this.saveSpecialties();
-    }
-
-    // Cargar doctores
-    const storedDoctors = localStorage.getItem('doctors');
-    if (storedDoctors) {
-      this.doctors = JSON.parse(storedDoctors);
-      this.updateSpecialtiesDoctors();
-    } else {
-      this.doctors = [];
-      this.saveDoctors();
-    }
-
-    // Cargar productos
-    const storedProducts = localStorage.getItem('products');
-    if (storedProducts) {
-      this.products = JSON.parse(storedProducts);
-    } else {
-      this.products = [];
-      this.saveProducts();
-    }
-
-    this.updateAnalytics();
+  loadAllData(): void {
+    this.loadSpecialties();
+    this.loadDoctors();
+    this.loadProducts();
   }
 
-  updateSpecialtiesDoctors(): void {
-    this.specialties.forEach(specialty => {
-      specialty.doctors = this.doctors.filter(d => d.specialtyId === specialty.id);
+  loadSpecialties(): void {
+    this.http.get<Specialty[]>(`${this.apiUrl}/specialties`).subscribe({
+      next: (data) => {
+        this.specialties = data;
+        this.updateAnalytics();
+      },
+      error: (error) => console.error('Error loading specialties:', error)
     });
   }
 
-  saveSpecialties(): void {
-    localStorage.setItem('specialties', JSON.stringify(this.specialties));
-    this.updateAnalytics();
+  loadDoctors(): void {
+    this.http.get<any[]>(`${this.apiUrl}/doctors`).subscribe({
+      next: (data) => {
+        this.doctors = data.map(doctor => ({
+          ...doctor,
+          name: doctor.user?.name,
+          email: doctor.user?.email,
+          phone: doctor.user?.phone
+        }));
+        this.updateAnalytics();
+      },
+      error: (error) => console.error('Error loading doctors:', error)
+    });
   }
 
-  saveDoctors(): void {
-    localStorage.setItem('doctors', JSON.stringify(this.doctors));
-    this.updateSpecialtiesDoctors();
-    this.updateAnalytics();
-  }
 
-  saveProducts(): void {
-    localStorage.setItem('products', JSON.stringify(this.products));
-    this.updateAnalytics();
+  loadProducts(): void {
+    this.http.get<Product[]>(`${this.apiUrl}/products`).subscribe({
+      next: (data) => {
+        this.products = data;
+        this.updateAnalytics();
+      },
+      error: (error) => console.error('Error loading products:', error)
+    });
   }
 
   updateAnalytics(): void {
     this.totalDoctors = this.doctors.length;
     this.totalProducts = this.products.length;
-    this.totalStock = this.products.reduce((sum, p) => sum + p.stock, 0);
-    this.totalValue = this.products.reduce((sum, p) => sum + (p.price * p.stock), 0);
+    this.totalStock = this.products.reduce((sum, p) => sum + (p.stock || 0), 0);
+    this.totalValue = this.products.reduce((sum, p) => sum + ((p.price || 0) * (p.stock || 0)), 0);
   }
 
   // ==================== ESPECIALIDADES ====================
@@ -192,38 +170,35 @@ export class DashboardComponent implements OnInit {
     if (!this.specialtyForm.name) return;
 
     if (this.editingSpecialty) {
-      // Editar
-      const index = this.specialties.findIndex(s => s.id === this.editingSpecialty!.id);
-      if (index !== -1) {
-        this.specialties[index] = {
-          ...this.specialties[index],
-          name: this.specialtyForm.name,
-          icon: this.specialtyForm.icon,
-          description: this.specialtyForm.description
-        };
-      }
+      this.http.put(`${this.apiUrl}/specialties/${this.editingSpecialty.id}`, this.specialtyForm)
+        .subscribe({
+          next: () => {
+            this.loadSpecialties();
+            this.closeSpecialtyModal();
+          },
+          error: (error) => console.error('Error updating specialty:', error)
+        });
     } else {
-      // Crear nueva
-      const newId = Math.max(0, ...this.specialties.map(s => s.id)) + 1;
-      this.specialties.push({
-        id: newId,
-        name: this.specialtyForm.name,
-        icon: this.specialtyForm.icon,
-        description: this.specialtyForm.description,
-        doctors: []
-      });
+      this.http.post(`${this.apiUrl}/specialties`, this.specialtyForm)
+        .subscribe({
+          next: () => {
+            this.loadSpecialties();
+            this.closeSpecialtyModal();
+          },
+          error: (error) => console.error('Error creating specialty:', error)
+        });
     }
-
-    this.saveSpecialties();
-    this.closeSpecialtyModal();
   }
 
   deleteSpecialty(id: number): void {
     if (confirm('¿Eliminar esta especialidad? Se eliminarán los doctores asociados.')) {
-      this.specialties = this.specialties.filter(s => s.id !== id);
-      this.doctors = this.doctors.filter(d => d.specialtyId !== id);
-      this.saveSpecialties();
-      this.saveDoctors();
+      this.http.delete(`${this.apiUrl}/specialties/${id}`).subscribe({
+        next: () => {
+          this.loadSpecialties();
+          this.loadDoctors();
+        },
+        error: (error) => console.error('Error deleting specialty:', error)
+      });
     }
   }
 
@@ -233,18 +208,29 @@ export class DashboardComponent implements OnInit {
   }
 
   // ==================== DOCTORES ====================
+
   openDoctorModal(doctor?: Doctor): void {
     if (doctor) {
       this.editingDoctor = doctor;
+      // Los datos vienen de doctor.user
       this.doctorForm = {
-        name: doctor.name,
-        email: doctor.email,
-        phone: doctor.phone,
-        specialtyId: doctor.specialtyId
+        name: doctor.user?.name || '',
+        email: doctor.user?.email || '',
+        phone: doctor.user?.phone || '',
+        specialtyId: doctor.specialtyId,
+        dni: doctor.user?.dni || '',
+        age: doctor.user?.age || null
       };
     } else {
       this.editingDoctor = null;
-      this.doctorForm = { name: '', email: '', phone: '', specialtyId: null };
+      this.doctorForm = {
+        name: '',
+        email: '',
+        phone: '',
+        specialtyId: null,
+        dni: '',
+        age: null
+      };
     }
     this.showDoctorModal = true;
   }
@@ -252,43 +238,42 @@ export class DashboardComponent implements OnInit {
   saveDoctor(): void {
     if (!this.doctorForm.name || !this.doctorForm.specialtyId) return;
 
-    const specialty = this.specialties.find(s => s.id === this.doctorForm.specialtyId);
+    const doctorData = {
+      name: this.doctorForm.name,
+      email: this.doctorForm.email,
+      phone: this.doctorForm.phone,
+      specialtyId: this.doctorForm.specialtyId,
+      dni: this.doctorForm.dni,
+      age: this.doctorForm.age
+    };
 
     if (this.editingDoctor) {
-      // Editar
-      const index = this.doctors.findIndex(d => d.id === this.editingDoctor!.id);
-      if (index !== -1) {
-        this.doctors[index] = {
-          ...this.doctors[index],
-          name: this.doctorForm.name,
-          email: this.doctorForm.email,
-          phone: this.doctorForm.phone,
-          specialtyId: this.doctorForm.specialtyId,
-          specialtyName: specialty?.name || ''
-        };
-      }
+      this.http.put(`${this.apiUrl}/doctors/${this.editingDoctor.id}`, doctorData)
+        .subscribe({
+          next: () => {
+            this.loadDoctors();
+            this.closeDoctorModal();
+          },
+          error: (error) => console.error('Error updating doctor:', error)
+        });
     } else {
-      // Crear nuevo
-      const newId = Math.max(0, ...this.doctors.map(d => d.id), 0) + 1;
-      this.doctors.push({
-        id: newId,
-        name: this.doctorForm.name,
-        email: this.doctorForm.email,
-        phone: this.doctorForm.phone,
-        specialtyId: this.doctorForm.specialtyId,
-        specialtyName: specialty?.name || '',
-        createdAt: new Date().toISOString()
-      });
+      this.http.post(`${this.apiUrl}/doctors`, doctorData)
+        .subscribe({
+          next: () => {
+            this.loadDoctors();
+            this.closeDoctorModal();
+          },
+          error: (error) => console.error('Error creating doctor:', error)
+        });
     }
-
-    this.saveDoctors();
-    this.closeDoctorModal();
   }
 
   deleteDoctor(id: number): void {
     if (confirm('¿Eliminar este doctor?')) {
-      this.doctors = this.doctors.filter(d => d.id !== id);
-      this.saveDoctors();
+      this.http.delete(`${this.apiUrl}/doctors/${id}`).subscribe({
+        next: () => this.loadDoctors(),
+        error: (error) => console.error('Error deleting doctor:', error)
+      });
     }
   }
 
@@ -298,7 +283,8 @@ export class DashboardComponent implements OnInit {
   }
 
   getSpecialtyName(specialtyId: number): string {
-    return this.specialties.find(s => s.id === specialtyId)?.name || 'No asignada';
+    const specialty = this.specialties.find(s => s.id === specialtyId);
+    return specialty?.name || 'No asignada';
   }
 
   // ==================== FARMACIA ====================
@@ -322,38 +308,32 @@ export class DashboardComponent implements OnInit {
     if (!this.productForm.name || this.productForm.price === null || this.productForm.stock === null) return;
 
     if (this.editingProduct) {
-      // Editar
-      const index = this.products.findIndex(p => p.id === this.editingProduct!.id);
-      if (index !== -1) {
-        this.products[index] = {
-          ...this.products[index],
-          name: this.productForm.name,
-          price: this.productForm.price,
-          stock: this.productForm.stock,
-          description: this.productForm.description
-        };
-      }
+      this.http.put(`${this.apiUrl}/products/${this.editingProduct.id}`, this.productForm)
+        .subscribe({
+          next: () => {
+            this.loadProducts();
+            this.closeProductModal();
+          },
+          error: (error) => console.error('Error updating product:', error)
+        });
     } else {
-      // Crear nuevo
-      const newId = Math.max(0, ...this.products.map(p => p.id), 0) + 1;
-      this.products.push({
-        id: newId,
-        name: this.productForm.name,
-        price: this.productForm.price,
-        stock: this.productForm.stock,
-        description: this.productForm.description,
-        createdAt: new Date().toISOString()
-      });
+      this.http.post(`${this.apiUrl}/products`, this.productForm)
+        .subscribe({
+          next: () => {
+            this.loadProducts();
+            this.closeProductModal();
+          },
+          error: (error) => console.error('Error creating product:', error)
+        });
     }
-
-    this.saveProducts();
-    this.closeProductModal();
   }
 
   deleteProduct(id: number): void {
     if (confirm('¿Eliminar este producto?')) {
-      this.products = this.products.filter(p => p.id !== id);
-      this.saveProducts();
+      this.http.delete(`${this.apiUrl}/products/${id}`).subscribe({
+        next: () => this.loadProducts(),
+        error: (error) => console.error('Error deleting product:', error)
+      });
     }
   }
 
@@ -373,7 +353,6 @@ export class DashboardComponent implements OnInit {
     window.location.href = '/login';
   }
 
-  // Cerrar modal al hacer clic en el backdrop
   closeModalOnBackdrop(event: MouseEvent, modalType: string): void {
     if ((event.target as HTMLElement).classList.contains('modal')) {
       switch (modalType) {
