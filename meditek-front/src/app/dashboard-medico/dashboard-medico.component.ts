@@ -7,7 +7,7 @@ import { HttpClient, HttpClientModule } from '@angular/common/http';
 interface Patient {
   id: number;
   userId: number;
-  user: { 
+  user: {
     id: number;
     name: string;
     email: string;
@@ -43,7 +43,7 @@ interface Consultation {
   diagnosis: string;
   observations: string;
   status: string;
-  patient?: {  
+  patient?: {
     id: number;
     user: {
       name: string;
@@ -244,8 +244,14 @@ export class DashboardMedicoComponent implements OnInit {
   }
 
   loadConsultations(): void {
-    this.http.get<Consultation[]>(`${this.apiUrl}/consultations/doctor/${this.doctorId}`).subscribe({
+    const userStr = localStorage.getItem('user');
+    if (!userStr) return;
+
+    const user = JSON.parse(userStr);
+
+    this.http.get<Consultation[]>(`${this.apiUrl}/consultations/doctor/${user.id}`).subscribe({
       next: (data) => {
+        console.log('Consultas cargadas:', data);
         this.consultations = data;
       },
       error: (error) => console.error('Error loading consultations:', error)
@@ -253,7 +259,11 @@ export class DashboardMedicoComponent implements OnInit {
   }
 
   loadTreatments(): void {
-    this.http.get<Treatment[]>(`${this.apiUrl}/treatments`).subscribe({
+    const userStr = localStorage.getItem('user');
+    if (!userStr) return;
+
+    const user = JSON.parse(userStr);
+    this.http.get<Treatment[]>(`${this.apiUrl}/treatments/doctor/${user.id}`).subscribe({
       next: (data) => {
         this.treatments = data;
       },
@@ -262,7 +272,11 @@ export class DashboardMedicoComponent implements OnInit {
   }
 
   loadReferrals(): void {
-    this.http.get<Referral[]>(`${this.apiUrl}/referrals`).subscribe({
+    const userStr = localStorage.getItem('user');
+    if (!userStr) return;
+
+    const user = JSON.parse(userStr);
+    this.http.get<Referral[]>(`${this.apiUrl}/referrals/doctor/${user.id}`).subscribe({
       next: (data) => {
         this.referrals = data;
       },
@@ -361,34 +375,73 @@ export class DashboardMedicoComponent implements OnInit {
 
   // ==================== CONSULTA MÉDICA ====================
   openConsultationModal(patient?: Patient): void {
-    if (patient) {
-      this.consultationForm.patientId = patient.id;
-    } else {
-      if (!this.consultationForm.patientId) {
-        this.errorMessage = 'Por favor seleccione un paciente';
-        return;
-      }
+    console.log('openConsultationModal llamado');
+    console.log('consultationForm.patientId:', this.consultationForm.patientId);
+    console.log('patient recibido:', patient);
+
+    // Si no hay paciente seleccionado y no se pasó un paciente, mostrar error
+    if (!this.consultationForm.patientId && !patient) {
+      this.errorMessage = 'Por favor seleccione un paciente primero';
+      console.log('Error: No hay paciente seleccionado');
+      return;
     }
 
-    this.consultationForm.symptoms = '';
-    this.consultationForm.diagnosis = '';
-    this.consultationForm.observations = '';
+    let patientId = this.consultationForm.patientId;
+    console.log("PACIENTE ID antes: ", patientId);
+
+    if (patient) {
+      patientId = patient.id;
+      console.log("PACIENTE ID desde parámetro: ", patientId);
+    }
+
+    this.consultationForm = {
+      patientId: patientId,
+      symptoms: '',
+      diagnosis: '',
+      observations: '',
+      images: []
+    };
+
+    console.log("showConsultationModal antes:", this.showConsultationModal);
     this.showConsultationModal = true;
+    console.log("showConsultationModal después:", this.showConsultationModal);
+
+    this.errorMessage = '';
   }
 
   saveConsultation(): void {
-    if (!this.consultationForm.patientId || !this.consultationForm.diagnosis) return;
+    // Validaciones
+    if (!this.consultationForm.patientId) {
+      this.errorMessage = 'Por favor seleccione un paciente';
+      return;
+    }
+
+    if (!this.consultationForm.diagnosis) {
+      this.errorMessage = 'Por favor ingrese un diagnóstico';
+      return;
+    }
+
+    const userStr = localStorage.getItem('user');
+    if (!userStr) {
+      this.errorMessage = 'Usuario no encontrado';
+      return;
+    }
+
+    const user = JSON.parse(userStr);
 
     const consultationData = {
       patientId: this.consultationForm.patientId,
-      doctorUserId: this.doctorId,
+      doctorUserId: user.id,
       symptoms: this.consultationForm.symptoms,
       diagnosis: this.consultationForm.diagnosis,
       observations: this.consultationForm.observations
     };
 
+    console.log('Enviando consulta:', consultationData);
+
     this.http.post(`${this.apiUrl}/consultations`, consultationData).subscribe({
       next: (response: any) => {
+        console.log('Consulta creada:', response);
         this.loadConsultations();
         this.closeConsultationModal();
 
@@ -400,7 +453,10 @@ export class DashboardMedicoComponent implements OnInit {
           this.openPrescriptionModal(response);
         }
       },
-      error: (error) => console.error('Error creating consultation:', error)
+      error: (error) => {
+        console.error('Error creating consultation:', error);
+        this.errorMessage = error.error?.message || 'Error al crear la consulta';
+      }
     });
   }
 

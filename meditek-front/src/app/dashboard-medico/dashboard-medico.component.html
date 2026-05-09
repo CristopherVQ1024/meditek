@@ -50,6 +50,10 @@
                 <span class="user-name">{{ doctorName }}</span>
             </div>
         </header>
+        <!-- Agrega esto después del header en cada tab -->
+        <div *ngIf="errorMessage" class="error-message">
+            {{ errorMessage }}
+        </div>
 
         <!-- PACIENTES -->
         <div *ngIf="activeTab === 'patients'" class="tab-content">
@@ -97,10 +101,11 @@
             <div class="section-header">
                 <select [(ngModel)]="consultationForm.patientId" class="patient-select">
                     <option [ngValue]="null">Seleccionar paciente</option>
-                    <option *ngFor="let patient of patients" [ngValue]="patient.id">{{ patient.user.name }} - {{
-                        patient.user.dni }}</option>
+                    <option *ngFor="let patient of patients" [ngValue]="patient.id">
+                        {{ patient.user.name }} - {{ patient.user.dni }}
+                    </option>
                 </select>
-                <button class="btn-primary" (click)="openConsultationModal()" [disabled]="!consultationForm.patientId">
+                <button class="btn-primary" (click)="openConsultationModal()">
                     + Nueva Consulta
                 </button>
             </div>
@@ -284,6 +289,41 @@
         <div class="modal-footer">
             <button class="btn-secondary" (click)="closeAppointmentModal()">Cancelar</button>
             <button class="btn-primary" (click)="scheduleNextAppointment()">Programar</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CONSULTA -->
+<div class="modal" *ngIf="showConsultationModal" (click)="closeModalOnBackdrop($event, 'consultation')">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h3>Nueva Consulta Médica</h3>
+            <button class="close-btn" (click)="closeConsultationModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Paciente</label>
+                <input type="text" class="form-control" [value]="getSelectedPatientName()" disabled>
+            </div>
+            <div class="form-group">
+                <label>Síntomas</label>
+                <textarea [(ngModel)]="consultationForm.symptoms" class="form-control" rows="3"
+                    placeholder="Describa los síntomas del paciente"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Diagnóstico</label>
+                <textarea [(ngModel)]="consultationForm.diagnosis" class="form-control" rows="3"
+                    placeholder="Diagnóstico médico" required></textarea>
+            </div>
+            <div class="form-group">
+                <label>Observaciones</label>
+                <textarea [(ngModel)]="consultationForm.observations" class="form-control" rows="3"
+                    placeholder="Observaciones adicionales"></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" (click)="closeConsultationModal()">Cancelar</button>
+            <button class="btn-primary" (click)="saveConsultation()">Guardar Consulta</button>
         </div>
     </div>
 </div>

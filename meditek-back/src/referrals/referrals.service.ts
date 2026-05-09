@@ -78,4 +78,33 @@ export class ReferralsService {
             data: { status }
         });
     }
+
+    async findByPatient(patientId: number) {
+        return this.prisma.referral.findMany({
+            where: { patientId },
+            include: {
+                doctor: { include: { user: true } },
+                toSpecialty: true
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+    }
+
+    async findOne(id: number) {
+        const referral = await this.prisma.referral.findUnique({
+            where: { id },
+            include: {
+                patient: { include: { user: true } },
+                toSpecialty: true,
+                doctor: { include: { user: true } }
+            }
+        });
+
+        if (!referral) {
+            throw new NotFoundException(`Transferencia con ID ${id} no encontrada`);
+        }
+
+        return referral;
+    }
+
 }

@@ -80,4 +80,32 @@ export class TreatmentsService {
             }
         });
     }
+
+    async findByDoctor(doctorId: number) {
+        return this.prisma.treatment.findMany({
+            where: { doctorId },
+            include: {
+                patient: { include: { user: true } },
+                doctor: { include: { user: true } }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+    }
+
+    async findOne(id: number) {
+        const treatment = await this.prisma.treatment.findUnique({
+            where: { id },
+            include: {
+                patient: { include: { user: true } },
+                doctor: { include: { user: true } },
+                evolutions: true
+            }
+        });
+
+        if (!treatment) {
+            throw new NotFoundException(`Tratamiento con ID ${id} no encontrado`);
+        }
+
+        return treatment;
+    }
 }
