@@ -1,9 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
+// prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
@@ -25,7 +20,9 @@ model User {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
+  // Relaciones
   doctor      Doctor?
+  patient     Patient?
 }
 
 model Doctor {
@@ -33,10 +30,123 @@ model Doctor {
   specialtyId  Int
   specialty    Specialty @relation(fields: [specialtyId], references: [id])
   specialtyName String
-  userId       Int       @unique  
-  user         User      @relation(fields: [userId], references: [id]) // ← Relación
+  userId       Int       @unique
+  user         User      @relation(fields: [userId], references: [id])
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  
+  // Relaciones
+  consultations Consultation[]
+  treatments    Treatment[]
+  referrals     Referral[]
+}
+
+model Patient {
+  id           Int       @id @default(autoincrement())
+  userId       Int       @unique
+  user         User      @relation(fields: [userId], references: [id])
+  address      String?
+  bloodType    String?
+  allergies    String[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  
+  // Relaciones
+  medicalHistory MedicalHistory?
+  consultations  Consultation[]
+  treatments     Treatment[]
+  prescriptions  Prescription[]
+  referrals      Referral[]  // Una sola relación
+}
+
+model MedicalHistory {
+  id              Int      @id @default(autoincrement())
+  patientId       Int      @unique
+  patient         Patient  @relation(fields: [patientId], references: [id])
+  chronicDiseases String[]
+  surgeries       String[]
+  familyHistory   String?
+  medications     String[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Consultation {
+  id           Int       @id @default(autoincrement())
+  patientId    Int
+  patient      Patient   @relation(fields: [patientId], references: [id])
+  doctorId     Int
+  doctor       Doctor    @relation(fields: [doctorId], references: [id])
+  date         DateTime  @default(now())
+  symptoms     String?
+  diagnosis    String
+  observations String?
+  status       String    @default("completed")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  
+  // Relaciones
+  treatment    Treatment?
+  prescription Prescription?
+}
+
+model Treatment {
+  id              Int            @id @default(autoincrement())
+  consultationId  Int?           @unique
+  consultation    Consultation?  @relation(fields: [consultationId], references: [id])
+  patientId       Int
+  patient         Patient        @relation(fields: [patientId], references: [id])
+  doctorId        Int
+  doctor          Doctor         @relation(fields: [doctorId], references: [id])
+  description     String
+  duration        Int
+  durationUnit    String
+  medications     Json
+  startDate       DateTime
+  endDate         DateTime
+  status          String         @default("active")
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  
+  evolutions      Evolution[]
+}
+
+model Evolution {
+  id          Int       @id @default(autoincrement())
+  treatmentId Int
+  treatment   Treatment @relation(fields: [treatmentId], references: [id])
+  date        DateTime  @default(now())
+  notes       String
+  doctorName  String
+  createdAt   DateTime  @default(now())
+}
+
+model Prescription {
+  id             Int          @id @default(autoincrement())
+  consultationId Int          @unique
+  consultation   Consultation @relation(fields: [consultationId], references: [id])
+  patientId      Int
+  patient        Patient      @relation(fields: [patientId], references: [id])
+  medications    String
+  instructions   String?
+  hospitalSeal   String
+  createdAt      DateTime     @default(now())
+}
+
+model Referral {
+  id             Int       @id @default(autoincrement())
+  patientId      Int
+  patient        Patient   @relation(fields: [patientId], references: [id])
+  fromSpecialty  String
+  toSpecialtyId  Int
+  toSpecialty    Specialty @relation(fields: [toSpecialtyId], references: [id])
+  reason         String
+  doctorId       Int
+  doctor         Doctor    @relation(fields: [doctorId], references: [id])
+  status         String    @default("pending")
+  newAppointment DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }
 
 model Specialty {
@@ -44,9 +154,12 @@ model Specialty {
   name        String
   icon        String
   description String
-  doctors     Doctor[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  
+  // Relaciones
+  doctors     Doctor[]
+  referrals   Referral[]
 }
 
 model Product {

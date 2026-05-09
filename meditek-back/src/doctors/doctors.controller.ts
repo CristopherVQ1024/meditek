@@ -30,4 +30,9 @@ export class DoctorsController {
     remove(@Param('id') id: string) {
         return this.doctorsService.remove(+id);
     }
+
+    @Get('by-user/:userId')
+    async findByUserId(@Param('userId') userId: string) {
+        return this.doctorsService.findByUserId(+userId);
+    }
 }

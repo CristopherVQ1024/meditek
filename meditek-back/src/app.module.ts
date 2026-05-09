@@ -8,11 +8,17 @@ import { ConfigModule } from '@nestjs/config';
 import { SpecialtiesModule } from './specialties/specialties.module';
 import { DoctorsModule } from './doctors/doctors.module';
 import { ProductsModule } from './products/products.module';
+import { PatientsModule } from './patients/patients.module';
+import { ConsultationsModule } from './consultations/consultations.module';
+import { TreatmentsModule } from './treatments/treatments.module';
+import { ReferralsModule } from './referrals/referrals.module';
+import { MedicalHistoryModule } from './medical-history/medical-history.module';
+import { PrescriptionsModule } from './prescriptions/prescriptions.module';
 
 @Module({
   imports: [PrismaModule, AuthModule, FirebaseModule, ConfigModule.forRoot({
     isGlobal: true,
-  }), AuthModule, SpecialtiesModule, DoctorsModule, ProductsModule,],
+  }), AuthModule, SpecialtiesModule, DoctorsModule, ProductsModule, PatientsModule, ConsultationsModule, TreatmentsModule, ReferralsModule, MedicalHistoryModule, PrescriptionsModule,],
   controllers: [AppController],
   providers: [AppService],
 })

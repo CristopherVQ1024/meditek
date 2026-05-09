@@ -201,11 +201,11 @@ export class DoctorsService {
     }
 
     async findByUserId(userId: number) {
-        const doctor = await this.prisma.doctor.findUnique({
+        const doctor = await this.prisma.doctor.findFirst({
             where: { userId },
             include: {
-                specialty: true,
-                user: true
+                user: true,
+                specialty: true
             }
         });
 

@@ -1,18 +1,14 @@
-import { Controller, Post, Body } from '@nestjs/common';
+// src/auth/auth.controller.ts
+import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { AuthService } from './auth.service';
 
 @Controller('auth')
 export class AuthController {
-
-    constructor(private authService: AuthService) { }
+    constructor(private readonly authService: AuthService) { }
 
     @Post('google')
-    async googleLogin(@Body() body: { idToken: string }) {
-        return this.authService.googleLogin(body.idToken);
-    }
-
-    @Post('complete-profile')
-    async completeProfile(@Body() body: any) {
-        return this.authService.completeProfile(body);
+    @HttpCode(HttpStatus.OK)
+    async googleLogin(@Body('idToken') idToken: string) {
+        return this.authService.googleLogin(idToken);
     }
 }

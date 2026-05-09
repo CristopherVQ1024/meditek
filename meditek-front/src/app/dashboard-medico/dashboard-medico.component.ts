@@ -1,18 +1,25 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient, HttpClientModule } from '@angular/common/http';
 
+// Interfaces actualizadas para el backend
 interface Patient {
   id: number;
-  name: string;
-  email: string;
-  phone: string;
-  dni: string;
-  age: number;
+  userId: number;
+  user: { 
+    id: number;
+    name: string;
+    email: string;
+    phone: string;
+    dni: string;
+    age: number;
+  };
   address: string;
   bloodType: string;
   allergies: string[];
   createdAt: string;
+  updatedAt: string;
   medicalHistory?: MedicalHistory;
 }
 
@@ -30,16 +37,26 @@ interface MedicalHistory {
 interface Consultation {
   id: number;
   patientId: number;
-  patientName: string;
+  doctorId: number;
   date: string;
   symptoms: string;
   diagnosis: string;
   observations: string;
-  images: string[];
+  status: string;
+  patient?: {  
+    id: number;
+    user: {
+      name: string;
+    };
+  };
+  doctor?: {
+    id: number;
+    user: {
+      name: string;
+    };
+  };
   treatment?: Treatment;
   prescription?: Prescription;
-  nextAppointment?: string;
-  status: 'completed' | 'in-progress';
 }
 
 interface Treatment {
@@ -48,12 +65,11 @@ interface Treatment {
   patientId: number;
   description: string;
   duration: number;
-  durationUnit: 'days' | 'weeks' | 'months';
+  durationUnit: string;
   medications: Medication[];
   startDate: string;
   endDate: string;
-  status: 'active' | 'completed' | 'cancelled';
-  evolution: Evolution[];
+  status: string;
 }
 
 interface Medication {
@@ -63,17 +79,10 @@ interface Medication {
   duration: number;
 }
 
-interface Evolution {
-  date: string;
-  notes: string;
-  doctorName: string;
-}
-
 interface Prescription {
   id: number;
   consultationId: number;
   patientId: number;
-  patientName: string;
   medications: string;
   instructions: string;
   createdAt: string;
@@ -83,25 +92,34 @@ interface Prescription {
 interface Referral {
   id: number;
   patientId: number;
-  patientName: string;
+  patient?: {
+    id: number;
+    user: {
+      name: string;
+    };
+  };
   fromSpecialty: string;
-  toSpecialty: string;
+  toSpecialtyId: number;
+  toSpecialty?: {
+    id: number;
+    name: string;
+  };
   reason: string;
-  status: 'pending' | 'approved' | 'completed';
+  status: string;
   createdAt: string;
-  newAppointmentDate?: string;
+  doctorId: number;
 }
-
 @Component({
   selector: 'app-dashboard-medico',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, HttpClientModule],
   templateUrl: './dashboard-medico.component.html',
   styleUrls: ['./dashboard-medico.component.scss']
 })
 export class DashboardMedicoComponent implements OnInit {
   activeTab: string = 'patients';
   doctorName: string = 'Dr. Médico';
+  doctorId: number = 0;
   referrals: Referral[] = [];
   errorMessage: string = '';
 
@@ -138,6 +156,8 @@ export class DashboardMedicoComponent implements OnInit {
   showTreatmentModal: boolean = false;
   selectedTreatment: Treatment | null = null;
   treatmentForm = {
+    consultationId: null as number | null,
+    patientId: null as number | null,
     description: '',
     duration: null as number | null,
     durationUnit: 'days' as 'days' | 'weeks' | 'months',
@@ -151,6 +171,8 @@ export class DashboardMedicoComponent implements OnInit {
   // Recetas
   showPrescriptionModal: boolean = false;
   prescriptionForm = {
+    consultationId: null as number | null,
+    patientId: null as number | null,
     medications: '',
     instructions: ''
   };
@@ -173,11 +195,13 @@ export class DashboardMedicoComponent implements OnInit {
   showAppointmentModal: boolean = false;
   appointmentDate: string = '';
 
-  constructor() { }
+  private apiUrl = 'http://localhost:3000/api';
+
+  constructor(private http: HttpClient) { }
 
   ngOnInit(): void {
-    this.loadData();
     this.getDoctorName();
+    this.loadAllData();
   }
 
   getDoctorName(): void {
@@ -186,93 +210,64 @@ export class DashboardMedicoComponent implements OnInit {
       try {
         const userData = JSON.parse(user);
         this.doctorName = userData.name || 'Dr. Médico';
+        // Obtener doctorId del usuario
+        this.loadDoctorId(userData.id);
       } catch (e) {
         this.doctorName = 'Dr. Médico';
       }
     }
   }
 
-  loadData(): void {
-    // Cargar pacientes
-    const storedPatients = localStorage.getItem('medico_patients');
-    if (storedPatients) {
-      this.patients = JSON.parse(storedPatients);
-    } else {
-      // Datos de ejemplo
-      this.patients = [
-        {
-          id: 1,
-          name: 'María González',
-          email: 'maria@email.com',
-          phone: '987654321',
-          dni: '71618201',
-          age: 45,
-          address: 'Av. Principal 123',
-          bloodType: 'O+',
-          allergies: ['Penicilina'],
-          createdAt: new Date().toISOString(),
-          medicalHistory: this.generateMedicalHistory(1)
-        },
-        {
-          id: 2,
-          name: 'Carlos Rodríguez',
-          email: 'carlos@email.com',
-          phone: '987654322',
-          dni: '71618202',
-          age: 32,
-          address: 'Calle Los Pinos 456',
-          bloodType: 'A+',
-          allergies: [],
-          createdAt: new Date().toISOString(),
-          medicalHistory: this.generateMedicalHistory(2)
-        }
-      ];
-      this.savePatients();
-    }
-
-    // Cargar consultas
-    const storedConsultations = localStorage.getItem('medico_consultations');
-    if (storedConsultations) {
-      this.consultations = JSON.parse(storedConsultations);
-    } else {
-      this.consultations = [];
-      this.saveConsultations();
-    }
-
-    // Cargar tratamientos
-    const storedTreatments = localStorage.getItem('medico_treatments');
-    if (storedTreatments) {
-      this.treatments = JSON.parse(storedTreatments);
-    } else {
-      this.treatments = [];
-      this.saveTreatments();
-    }
+  loadDoctorId(userId: number): void {
+    this.http.get<any>(`${this.apiUrl}/doctors/by-user/${userId}`).subscribe({
+      next: (doctor) => {
+        this.doctorId = doctor.id;
+        this.loadConsultations();
+        this.loadTreatments();
+        this.loadReferrals();
+      },
+      error: (error) => console.error('Error loading doctor:', error)
+    });
   }
 
-  // Generar historial clínico con IA (simulado)
-  generateMedicalHistory(patientId: number): MedicalHistory {
-    return {
-      id: patientId,
-      patientId: patientId,
-      chronicDiseases: ['Hipertensión', 'Diabetes tipo 2'],
-      surgeries: ['Apendicectomía (2015)'],
-      familyHistory: 'Madre con hipertensión, padre sano',
-      medications: ['Metformina 500mg', 'Enalapril 10mg'],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+  loadAllData(): void {
+    this.loadPatients();
   }
 
-  savePatients(): void {
-    localStorage.setItem('medico_patients', JSON.stringify(this.patients));
+  loadPatients(): void {
+    this.http.get<Patient[]>(`${this.apiUrl}/patients`).subscribe({
+      next: (data) => {
+        this.patients = data;
+      },
+      error: (error) => console.error('Error loading patients:', error)
+    });
   }
 
-  saveConsultations(): void {
-    localStorage.setItem('medico_consultations', JSON.stringify(this.consultations));
+  loadConsultations(): void {
+    this.http.get<Consultation[]>(`${this.apiUrl}/consultations/doctor/${this.doctorId}`).subscribe({
+      next: (data) => {
+        this.consultations = data;
+      },
+      error: (error) => console.error('Error loading consultations:', error)
+    });
   }
 
-  saveTreatments(): void {
-    localStorage.setItem('medico_treatments', JSON.stringify(this.treatments));
+  loadTreatments(): void {
+    this.http.get<Treatment[]>(`${this.apiUrl}/treatments`).subscribe({
+      next: (data) => {
+        this.treatments = data;
+      },
+      error: (error) => console.error('Error loading treatments:', error)
+    });
+  }
+
+  loadReferrals(): void {
+    this.http.get<Referral[]>(`${this.apiUrl}/referrals`).subscribe({
+      next: (data) => {
+        this.referrals = data;
+      },
+      error: (error) => console.error('Error loading referrals:', error)
+    });
   }
 
   // ==================== GESTIÓN DE PACIENTES ====================
@@ -280,11 +275,11 @@ export class DashboardMedicoComponent implements OnInit {
     if (patient) {
       this.editingPatient = patient;
       this.patientForm = {
-        name: patient.name,
-        email: patient.email,
-        phone: patient.phone,
-        dni: patient.dni,
-        age: patient.age,
+        name: patient.user.name,
+        email: patient.user.email,
+        phone: patient.user.phone,
+        dni: patient.user.dni,
+        age: patient.user.age,
         address: patient.address,
         bloodType: patient.bloodType,
         allergies: patient.allergies.join(', ')
@@ -308,51 +303,44 @@ export class DashboardMedicoComponent implements OnInit {
   savePatient(): void {
     if (!this.patientForm.name || !this.patientForm.dni) return;
 
-    if (this.editingPatient) {
-      const index = this.patients.findIndex(p => p.id === this.editingPatient!.id);
-      if (index !== -1) {
-        this.patients[index] = {
-          ...this.patients[index],
-          name: this.patientForm.name,
-          email: this.patientForm.email,
-          phone: this.patientForm.phone,
-          dni: this.patientForm.dni,
-          age: this.patientForm.age || 0,
-          address: this.patientForm.address,
-          bloodType: this.patientForm.bloodType,
-          allergies: this.patientForm.allergies.split(',').map(a => a.trim())
-        };
-      }
-    } else {
-      const newId = Math.max(0, ...this.patients.map(p => p.id), 0) + 1;
-      const newPatient: Patient = {
-        id: newId,
-        name: this.patientForm.name,
-        email: this.patientForm.email,
-        phone: this.patientForm.phone,
-        dni: this.patientForm.dni,
-        age: this.patientForm.age || 0,
-        address: this.patientForm.address,
-        bloodType: this.patientForm.bloodType,
-        allergies: this.patientForm.allergies.split(',').map(a => a.trim()),
-        createdAt: new Date().toISOString(),
-        medicalHistory: this.generateMedicalHistory(newId)
-      };
-      this.patients.push(newPatient);
-    }
+    const patientData = {
+      name: this.patientForm.name,
+      email: this.patientForm.email,
+      phone: this.patientForm.phone,
+      dni: this.patientForm.dni,
+      age: this.patientForm.age,
+      address: this.patientForm.address,
+      bloodType: this.patientForm.bloodType,
+      allergies: this.patientForm.allergies.split(',').map(a => a.trim())
+    };
 
-    this.savePatients();
-    this.closePatientModal();
+    if (this.editingPatient) {
+      this.http.put(`${this.apiUrl}/patients/${this.editingPatient.id}`, patientData).subscribe({
+        next: () => {
+          this.loadPatients();
+          this.closePatientModal();
+        },
+        error: (error) => console.error('Error updating patient:', error)
+      });
+    } else {
+      this.http.post(`${this.apiUrl}/patients`, patientData).subscribe({
+        next: () => {
+          this.loadPatients();
+          this.closePatientModal();
+        },
+        error: (error) => console.error('Error creating patient:', error)
+      });
+    }
   }
 
   deletePatient(id: number): void {
     if (confirm('¿Eliminar este paciente? Se eliminarán todas sus consultas y tratamientos.')) {
-      this.patients = this.patients.filter(p => p.id !== id);
-      this.consultations = this.consultations.filter(c => c.patientId !== id);
-      this.treatments = this.treatments.filter(t => t.patientId !== id);
-      this.savePatients();
-      this.saveConsultations();
-      this.saveTreatments();
+      this.http.delete(`${this.apiUrl}/patients/${id}`).subscribe({
+        next: () => {
+          this.loadPatients();
+        },
+        error: (error) => console.error('Error deleting patient:', error)
+      });
     }
   }
 
@@ -362,14 +350,17 @@ export class DashboardMedicoComponent implements OnInit {
   }
 
   viewMedicalHistory(patient: Patient): void {
-    this.selectedMedicalHistory = patient.medicalHistory || this.generateMedicalHistory(patient.id);
-    this.showMedicalHistoryModal = true;
+    this.http.get<MedicalHistory>(`${this.apiUrl}/medical-history/patient/${patient.id}`).subscribe({
+      next: (data) => {
+        this.selectedMedicalHistory = data;
+        this.showMedicalHistoryModal = true;
+      },
+      error: (error) => console.error('Error loading medical history:', error)
+    });
   }
 
   // ==================== CONSULTA MÉDICA ====================
-
   openConsultationModal(patient?: Patient): void {
-
     if (patient) {
       this.consultationForm.patientId = patient.id;
     } else {
@@ -388,33 +379,29 @@ export class DashboardMedicoComponent implements OnInit {
   saveConsultation(): void {
     if (!this.consultationForm.patientId || !this.consultationForm.diagnosis) return;
 
-    const patient = this.patients.find(p => p.id === this.consultationForm.patientId);
-
-    const newConsultation: Consultation = {
-      id: Math.max(0, ...this.consultations.map(c => c.id), 0) + 1,
+    const consultationData = {
       patientId: this.consultationForm.patientId,
-      patientName: patient?.name || '',
-      date: new Date().toISOString(),
+      doctorUserId: this.doctorId,
       symptoms: this.consultationForm.symptoms,
       diagnosis: this.consultationForm.diagnosis,
-      observations: this.consultationForm.observations,
-      images: this.consultationForm.images,
-      status: 'completed'
+      observations: this.consultationForm.observations
     };
 
-    this.consultations.push(newConsultation);
-    this.saveConsultations();
+    this.http.post(`${this.apiUrl}/consultations`, consultationData).subscribe({
+      next: (response: any) => {
+        this.loadConsultations();
+        this.closeConsultationModal();
 
-    // Preguntar si quiere agregar tratamiento o receta
-    if (confirm('¿Desea agregar un tratamiento para este paciente?')) {
-      this.openTreatmentModal(newConsultation);
-    }
+        if (confirm('¿Desea agregar un tratamiento para este paciente?')) {
+          this.openTreatmentModal(response);
+        }
 
-    if (confirm('¿Desea generar una receta médica?')) {
-      this.openPrescriptionModal(newConsultation, patient!);
-    }
-
-    this.closeConsultationModal();
+        if (confirm('¿Desea generar una receta médica?')) {
+          this.openPrescriptionModal(response);
+        }
+      },
+      error: (error) => console.error('Error creating consultation:', error)
+    });
   }
 
   closeConsultationModal(): void {
@@ -423,9 +410,11 @@ export class DashboardMedicoComponent implements OnInit {
   }
 
   // ==================== TRATAMIENTOS ====================
-  openTreatmentModal(consultation?: Consultation): void {
+  openTreatmentModal(consultation?: any): void {
     this.selectedTreatment = null;
     this.treatmentForm = {
+      consultationId: consultation?.id || null,
+      patientId: this.consultationForm.patientId,
       description: '',
       duration: null,
       durationUnit: 'days',
@@ -469,28 +458,34 @@ export class DashboardMedicoComponent implements OnInit {
   saveTreatment(): void {
     if (!this.treatmentForm.description) return;
 
-    const newTreatment: Treatment = {
-      id: Math.max(0, ...this.treatments.map(t => t.id), 0) + 1,
-      consultationId: 0,
-      patientId: this.consultationForm.patientId || 0,
+    const treatmentData = {
+      consultationId: this.treatmentForm.consultationId,
+      patientId: this.treatmentForm.patientId,
+      doctorUserId: this.doctorId,
       description: this.treatmentForm.description,
-      duration: this.treatmentForm.duration || 0,
+      duration: this.treatmentForm.duration,
       durationUnit: this.treatmentForm.durationUnit,
       medications: this.treatmentForm.medications,
       startDate: this.treatmentForm.startDate,
-      endDate: this.treatmentForm.endDate,
-      status: 'active',
-      evolution: []
+      endDate: this.treatmentForm.endDate
     };
 
-    this.treatments.push(newTreatment);
-    this.saveTreatments();
-    this.closeTreatmentModal();
+    this.http.post(`${this.apiUrl}/treatments`, treatmentData).subscribe({
+      next: () => {
+        this.loadTreatments();
+        this.closeTreatmentModal();
+      },
+      error: (error) => console.error('Error creating treatment:', error)
+    });
   }
 
   completeTreatment(treatment: Treatment): void {
-    treatment.status = 'completed';
-    this.saveTreatments();
+    this.http.put(`${this.apiUrl}/treatments/${treatment.id}/status`, { status: 'completed' }).subscribe({
+      next: () => {
+        this.loadTreatments();
+      },
+      error: (error) => console.error('Error updating treatment:', error)
+    });
   }
 
   closeTreatmentModal(): void {
@@ -498,8 +493,10 @@ export class DashboardMedicoComponent implements OnInit {
   }
 
   // ==================== RECETAS ====================
-  openPrescriptionModal(consultation: Consultation, patient: Patient): void {
+  openPrescriptionModal(consultation: any): void {
     this.prescriptionForm = {
+      consultationId: consultation.id,
+      patientId: consultation.patientId,
       medications: '',
       instructions: 'Tomar según indicación médica. No exceder la dosis recomendada.'
     };
@@ -509,21 +506,20 @@ export class DashboardMedicoComponent implements OnInit {
   generatePrescription(): void {
     if (!this.prescriptionForm.medications) return;
 
-    const prescription: Prescription = {
-      id: Math.max(0, ...this.consultations.map(c => c.id), 0) + 1,
-      consultationId: this.consultationForm.patientId || 0,
-      patientId: this.consultationForm.patientId || 0,
-      patientName: this.patients.find(p => p.id === this.consultationForm.patientId)?.name || '',
+    const prescriptionData = {
+      consultationId: this.prescriptionForm.consultationId,
+      patientId: this.prescriptionForm.patientId,
       medications: this.prescriptionForm.medications,
-      instructions: this.prescriptionForm.instructions,
-      createdAt: new Date().toISOString(),
-      hospitalSeal: '🏥 HOSPITAL MEDITEK - SELLO OFICIAL 🏥'
+      instructions: this.prescriptionForm.instructions
     };
 
-    // Simular envío de correo
-    alert(`📧 Receta enviada al correo del paciente\n\n${prescription.hospitalSeal}\n\nMedicamentos:\n${prescription.medications}\n\nInstrucciones:\n${prescription.instructions}\n\nAtentamente,\n${this.doctorName}`);
-
-    this.closePrescriptionModal();
+    this.http.post(`${this.apiUrl}/prescriptions`, prescriptionData).subscribe({
+      next: (prescription: any) => {
+        alert(`📧 Receta enviada al correo del paciente\n\n${prescription.hospitalSeal}\n\nMedicamentos:\n${prescription.medications}\n\nInstrucciones:\n${prescription.instructions}\n\nAtentamente,\n${this.doctorName}`);
+        this.closePrescriptionModal();
+      },
+      error: (error) => console.error('Error creating prescription:', error)
+    });
   }
 
   closePrescriptionModal(): void {
@@ -539,28 +535,25 @@ export class DashboardMedicoComponent implements OnInit {
     };
     this.showReferralModal = true;
   }
+
   createReferral(): void {
     if (!this.referralForm.toSpecialty || !this.referralForm.reason) return;
 
-    const patient = this.patients.find(p => p.id === this.referralForm.patientId);
-
-    const newReferral: Referral = {
-      id: Math.max(0, ...this.referrals.map(r => r.id), 0) + 1,
-      patientId: this.referralForm.patientId!,
-      patientName: patient?.name || '',
-      fromSpecialty: 'Medicina General',
+    const referralData = {
+      patientId: this.referralForm.patientId,
+      doctorUserId: this.doctorId,
       toSpecialty: this.referralForm.toSpecialty,
-      reason: this.referralForm.reason,
-      status: 'pending',
-      createdAt: new Date().toISOString()
+      reason: this.referralForm.reason
     };
 
-    this.referrals.push(newReferral);
-    localStorage.setItem('medico_referrals', JSON.stringify(this.referrals));
-
-    alert(`✅ Paciente derivado a ${this.referralForm.toSpecialty}\nMotivo: ${this.referralForm.reason}\nSe ha creado una nueva cita automáticamente.`);
-
-    this.closeReferralModal();
+    this.http.post(`${this.apiUrl}/referrals`, referralData).subscribe({
+      next: () => {
+        this.loadReferrals();
+        alert(`✅ Paciente derivado a ${this.referralForm.toSpecialty}\nMotivo: ${this.referralForm.reason}\nSe ha creado una nueva cita automáticamente.`);
+        this.closeReferralModal();
+      },
+      error: (error) => console.error('Error creating referral:', error)
+    });
   }
 
   closeReferralModal(): void {
@@ -577,8 +570,7 @@ export class DashboardMedicoComponent implements OnInit {
   scheduleNextAppointment(): void {
     if (!this.appointmentDate) return;
 
-    alert(`📅 Próxima cita agendada para ${this.selectedPatient?.name} el día ${this.appointmentDate}\nSe ha enviado un recordatorio al correo del paciente.`);
-
+    alert(`📅 Próxima cita agendada para ${this.selectedPatient?.user.name} el día ${this.appointmentDate}\nSe ha enviado un recordatorio al correo del paciente.`);
     this.closeAppointmentModal();
   }
 
@@ -626,20 +618,16 @@ export class DashboardMedicoComponent implements OnInit {
     }
   }
 
-  getPatientName(): string {
-    const patient = this.patients.find(p => p.id === this.consultationForm.patientId);
-    return patient?.name || 'Seleccionado';
-  }
-
-  // Mejora este método
   getSelectedPatientName(): string {
-
     if (!this.consultationForm.patientId) {
       return 'No hay paciente seleccionado';
     }
-
     const patient = this.patients.find(p => p.id === this.consultationForm.patientId);
+    return patient ? `${patient.user.name} - ${patient.user.dni}` : 'Paciente no encontrado';
+  }
 
-    return patient ? `${patient.name} - ${patient.dni}` : 'Paciente no encontrado';
+  getPatientName(patientId: number): string {
+    const patient = this.patients.find(p => p.id === patientId);
+    return patient?.user.name || 'Desconocido';
   }
 }

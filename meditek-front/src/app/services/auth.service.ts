@@ -1,51 +1,38 @@
+// auth.service.ts
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, from, switchMap } from 'rxjs';
+import { Observable, from } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
 import { Auth, GoogleAuthProvider, signInWithPopup } from '@angular/fire/auth';
 
 export interface LoginResponse {
     success: boolean;
-    token: string;
-    user: {
+    token?: string;
+    user?: {
         id: number;
-        firebaseUid: string;
-        email: string;
-        name: string;
-        dni?: string | null;
-        age?: number | null;
-        role: string;
-        createdAt?: string;
-        updatedAt?: string;
-    };
-}
-
-export interface CompleteProfileResponse {
-    success: boolean;
-    token: string;
-    user: {
-        id: string;
         email: string;
         name: string;
         role: string;
-        firebaseUid: string;
-        dni: string;
-        age: number;
+        dni?: string;
+        doctorId?: number;
+        patientId?: number;
     };
-}
-
-export interface CompleteProfileData {
-    dni: string;
-    age: number;
-    email: string;
-    name: string;
-    firebaseUid: string;
+    isFirstLogin?: boolean;
+    requiresRegistration?: boolean;
+    needsProfileCompletion?: boolean;
+    redirectTo?: string;
+    firebaseData?: {
+        uid: string;
+        email: string;
+        name: string;
+    };
+    message?: string;
 }
 
 @Injectable({
     providedIn: 'root'
 })
 export class AuthService {
-
     private apiUrl = 'http://localhost:3000/api';
 
     constructor(
@@ -54,18 +41,12 @@ export class AuthService {
     ) { }
 
     loginWithGoogle(): Observable<LoginResponse> {
-
         const provider = new GoogleAuthProvider();
-
         return from(signInWithPopup(this.auth, provider)).pipe(
-
             switchMap(async (credential) => {
-
                 const idToken = await credential.user.getIdToken();
-
                 return idToken;
             }),
-
             switchMap((idToken) =>
                 this.http.post<LoginResponse>(
                     `${this.apiUrl}/auth/google`,
@@ -75,26 +56,20 @@ export class AuthService {
         );
     }
 
-    completeProfile(data: CompleteProfileData): Observable<CompleteProfileResponse> {
-        return this.http.post<CompleteProfileResponse>(
-            `${this.apiUrl}/auth/complete-profile`,
-            data
-        );
+    registerPatient(data: any): Observable<LoginResponse> {
+        return this.http.post<LoginResponse>(`${this.apiUrl}/auth/register-patient`, data);
     }
 
-    async logout(): Promise<void> {
-        await this.auth.signOut();
-
+    logout(): void {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        this.auth.signOut();
     }
 
-    isAuthenticated(): boolean {
-        return !!localStorage.getItem('token');
-    }
-
-    getCurrentUser(): any {
-        const user = localStorage.getItem('user');
-        return user ? JSON.parse(user) : null;
+    saveUserData(loginResponse: LoginResponse): void {
+        if (loginResponse.token && loginResponse.user) {
+            localStorage.setItem('token', loginResponse.token);
+            localStorage.setItem('user', JSON.stringify(loginResponse.user));
+        }
     }
 }

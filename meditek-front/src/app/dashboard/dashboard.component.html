@@ -101,8 +101,8 @@
                     <tbody>
                         <tr *ngFor="let doctor of doctors">
                             <td>{{ doctor.id }}</td>
-                            <td>{{ doctor.user?.name || 'Sin nombre' }}</td>
-                            <td>{{ doctor.user?.email || 'Sin email' }}</td>
+                            <td>{{ doctor.user.name || 'Sin nombre' }}</td>
+                            <td>{{ doctor.user.email || 'Sin email' }}</td>
                             <td>{{ doctor.user.phone || 'Sin teléfono' }}</td> <!-- ← Solo user.phone -->
                             <td><span class="badge">{{ doctor.specialtyName }}</span></td>
                             <td class="actions">
