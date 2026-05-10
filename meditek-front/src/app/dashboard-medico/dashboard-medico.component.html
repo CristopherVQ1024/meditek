@@ -147,13 +147,14 @@
 
             <div class="treatments-grid">
                 <div class="treatment-card" *ngFor="let treatment of treatments">
-                    <div class="treatment-header">
+                    <div>
                         <h3>{{ treatment.description }}</h3>
-                        <span class="status-badge" [class.active]="treatment.status === 'active'"
-                            [class.completed]="treatment.status === 'completed'">
-                            {{ treatment.status === 'active' ? 'Activo' : 'Completado' }}
-                        </span>
+                        <small class="tr-nombre">Paciente: {{ treatment.patient?.user?.name || 'Paciente' }}</small>
                     </div>
+                    <span class="status-badge" [class.active]="treatment.status === 'active'"
+                        [class.completed]="treatment.status === 'completed'">
+                        {{ treatment.status === 'active' ? 'Activo' : 'Completado' }}
+                    </span>
                     <div class="treatment-details">
                         <p><span>📅</span> Inicio: {{ treatment.startDate | date:'dd/MM/yyyy' }}</p>
                         <p><span>📅</span> Fin: {{ treatment.endDate | date:'dd/MM/yyyy' }}</p>
@@ -324,6 +325,99 @@
         <div class="modal-footer">
             <button class="btn-secondary" (click)="closeConsultationModal()">Cancelar</button>
             <button class="btn-primary" (click)="saveConsultation()">Guardar Consulta</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL TRATAMIENTO -->
+<div class="modal" *ngIf="showTreatmentModal" (click)="closeModalOnBackdrop($event, 'treatment')">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h3>{{ selectedTreatment ? 'Editar Tratamiento' : 'Nuevo Tratamiento' }}</h3>
+            <button class="close-btn" (click)="closeTreatmentModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Descripción del Tratamiento</label>
+                <textarea [(ngModel)]="treatmentForm.description" class="form-control" rows="2"
+                    placeholder="Ej: Tratamiento antibiótico"></textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Duración</label>
+                    <input type="number" [(ngModel)]="treatmentForm.duration" class="form-control" placeholder="Número"
+                        (change)="calculateEndDate()">
+                </div>
+                <div class="form-group">
+                    <label>Unidad</label>
+                    <select [(ngModel)]="treatmentForm.durationUnit" class="form-control" (change)="calculateEndDate()">
+                        <option value="days">Días</option>
+                        <option value="weeks">Semanas</option>
+                        <option value="months">Meses</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Fecha Inicio</label>
+                    <input type="date" [(ngModel)]="treatmentForm.startDate" class="form-control"
+                        (change)="calculateEndDate()">
+                </div>
+                <div class="form-group">
+                    <label>Fecha Fin</label>
+                    <input type="date" [(ngModel)]="treatmentForm.endDate" class="form-control" disabled>
+                </div>
+            </div>
+
+            <div class="medications-section">
+                <label>Medicamentos</label>
+                <div class="medication-form">
+                    <input type="text" [(ngModel)]="newMedication.name" placeholder="Medicamento" class="med-input">
+                    <input type="text" [(ngModel)]="newMedication.dosage" placeholder="Dosis" class="med-input">
+                    <input type="text" [(ngModel)]="newMedication.frequency" placeholder="Frecuencia" class="med-input">
+                    <button class="btn-add" (click)="addMedication()">+</button>
+                </div>
+                <div class="medications-list" *ngIf="treatmentForm.medications.length > 0">
+                    <div class="medication-item" *ngFor="let med of treatmentForm.medications; let i = index">
+                        <span>{{ med.name }} - {{ med.dosage }} ({{ med.frequency }})</span>
+                        <button class="btn-remove" (click)="removeMedication(i)">✖</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" (click)="closeTreatmentModal()">Cancelar</button>
+            <button class="btn-primary" (click)="saveTreatment()">Guardar Tratamiento</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL RECETA -->
+<div class="modal" *ngIf="showPrescriptionModal" (click)="closeModalOnBackdrop($event, 'prescription')">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Generar Receta Médica</h3>
+            <button class="close-btn" (click)="closePrescriptionModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Medicamentos</label>
+                <textarea [(ngModel)]="prescriptionForm.medications" class="form-control" rows="4"
+                    placeholder="Lista de medicamentos y dosis"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Instrucciones</label>
+                <textarea [(ngModel)]="prescriptionForm.instructions" class="form-control" rows="3"></textarea>
+            </div>
+            <div class="hospital-seal-preview">
+                <div class="seal">
+                    🏥 HOSPITAL MEDITEK - SELLO OFICIAL 🏥
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" (click)="closePrescriptionModal()">Cancelar</button>
+            <button class="btn-primary" (click)="generatePrescription()">📧 Enviar por Correo</button>
         </div>
     </div>
 </div>

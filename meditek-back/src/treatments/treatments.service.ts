@@ -6,12 +6,16 @@ export class TreatmentsService {
     constructor(private prisma: PrismaService) { }
 
     async create(data: any) {
+        console.log('Buscando doctor con userId:', data.doctorUserId);
+
         const doctor = await this.prisma.doctor.findFirst({
             where: { userId: data.doctorUserId }
         });
 
+        console.log('Doctor encontrado:', doctor);
+
         if (!doctor) {
-            throw new NotFoundException('Doctor no encontrado');
+            throw new NotFoundException(`Doctor con userId ${data.doctorUserId} no encontrado`);
         }
 
         return this.prisma.treatment.create({

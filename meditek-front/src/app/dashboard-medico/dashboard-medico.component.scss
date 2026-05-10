@@ -351,6 +351,8 @@
                 margin: 0;
                 color: #2C3E50;
             }
+
+
         }
 
         .treatment-details {
@@ -445,6 +447,8 @@
                 margin: 0;
                 color: #2C3E50;
             }
+
+
 
             .close-btn {
                 background: none;
@@ -717,4 +721,92 @@
     border-radius: 8px;
     margin-bottom: 16px;
     text-align: center;
+}
+
+// Estilos para los modales de tratamiento
+.form-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+
+    .form-group {
+        flex: 1;
+    }
+}
+
+.medications-section {
+    margin-top: 16px;
+
+    label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+    }
+}
+
+.medication-form {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+
+    .med-input {
+        flex: 1;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    .btn-add {
+        padding: 8px 16px;
+        background: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+
+        &:hover {
+            background: #45a049;
+        }
+    }
+}
+
+.medications-list {
+    margin-top: 12px;
+
+    .medication-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px;
+        background: #f5f5f5;
+        border-radius: 4px;
+        margin-bottom: 8px;
+
+        .btn-remove {
+            background: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+
+            &:hover {
+                background: #cc0000;
+            }
+        }
+    }
+}
+
+.hospital-seal-preview {
+    margin-top: 20px;
+    padding: 16px;
+    text-align: center;
+    border-top: 2px dashed #ccc;
+
+    .seal {
+        font-size: 14px;
+        color: #666;
+        font-family: monospace;
+    }
 }

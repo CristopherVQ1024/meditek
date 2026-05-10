@@ -63,6 +63,7 @@ interface Treatment {
   id: number;
   consultationId: number;
   patientId: number;
+  doctorId: number;
   description: string;
   duration: number;
   durationUnit: string;
@@ -70,8 +71,25 @@ interface Treatment {
   startDate: string;
   endDate: string;
   status: string;
+  createdAt: string;
+  updatedAt: string;
+  patient?: {  
+    id: number;
+    userId: number;
+    user?: {
+      id: number;
+      name?: string;
+      email: string;
+      phone?: string;
+    };
+  };
+  doctor?: {  
+    id: number;
+    user: {
+      name: string;
+    };
+  };
 }
-
 interface Medication {
   name: string;
   dosage: string;
@@ -204,17 +222,14 @@ export class DashboardMedicoComponent implements OnInit {
     this.loadAllData();
   }
 
+  // dashboard-medico.component.ts
   getDoctorName(): void {
     const user = localStorage.getItem('user');
     if (user) {
-      try {
-        const userData = JSON.parse(user);
-        this.doctorName = userData.name || 'Dr. Médico';
-        // Obtener doctorId del usuario
-        this.loadDoctorId(userData.id);
-      } catch (e) {
-        this.doctorName = 'Dr. Médico';
-      }
+      const userData = JSON.parse(user);
+      console.log('Usuario logueado:', userData);  // ← Mira qué id tiene
+      this.doctorName = userData.name || 'Dr. Médico';
+      this.loadDoctorId(userData.id);
     }
   }
 
@@ -263,7 +278,7 @@ export class DashboardMedicoComponent implements OnInit {
     if (!userStr) return;
 
     const user = JSON.parse(userStr);
-    this.http.get<Treatment[]>(`${this.apiUrl}/treatments/doctor/${user.id}`).subscribe({
+    this.http.get<Treatment[]>(`${this.apiUrl}/treatments/doctor/${user.doctorId}`).subscribe({
       next: (data) => {
         this.treatments = data;
       },
@@ -467,10 +482,12 @@ export class DashboardMedicoComponent implements OnInit {
 
   // ==================== TRATAMIENTOS ====================
   openTreatmentModal(consultation?: any): void {
+    console.log('Abriendo modal de tratamiento, consultation:', consultation);
+
     this.selectedTreatment = null;
     this.treatmentForm = {
       consultationId: consultation?.id || null,
-      patientId: this.consultationForm.patientId,
+      patientId: consultation?.patientId || this.consultationForm.patientId,
       description: '',
       duration: null,
       durationUnit: 'days',
@@ -479,6 +496,7 @@ export class DashboardMedicoComponent implements OnInit {
       endDate: ''
     };
     this.showTreatmentModal = true;
+    console.log('showTreatmentModal:', this.showTreatmentModal);
   }
 
   addMedication(): void {
@@ -513,11 +531,14 @@ export class DashboardMedicoComponent implements OnInit {
 
   saveTreatment(): void {
     if (!this.treatmentForm.description) return;
+    const userStr = localStorage.getItem('user');
+    if (!userStr) return;
 
+    const user = JSON.parse(userStr);
     const treatmentData = {
       consultationId: this.treatmentForm.consultationId,
       patientId: this.treatmentForm.patientId,
-      doctorUserId: this.doctorId,
+      doctorUserId: user.id,
       description: this.treatmentForm.description,
       duration: this.treatmentForm.duration,
       durationUnit: this.treatmentForm.durationUnit,
