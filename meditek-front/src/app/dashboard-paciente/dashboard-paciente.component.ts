@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink, RouterModule } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 
 interface Doctor {
   id: number;
@@ -63,6 +64,7 @@ export class DashboardPacienteComponent implements OnInit {
   activeTab: string = 'appointments';
   patientName: string = '';
   patientId: number = 0;
+  private apiUrl = 'http://localhost:3000';
 
   // Doctores
   doctors: Doctor[] = [];
@@ -89,11 +91,12 @@ export class DashboardPacienteComponent implements OnInit {
   upcomingAppointments: Appointment[] = [];
   medicalReminders: string[] = [];
 
-  constructor() { }
+  userId: number = 0;
+
+  constructor(private http: HttpClient) { }
 
   ngOnInit(): void {
     this.loadUserData();
-    this.loadData();
   }
 
   loadUserData(): void {
@@ -102,47 +105,60 @@ export class DashboardPacienteComponent implements OnInit {
       try {
         const userData = JSON.parse(user);
         this.patientName = userData.name || 'Paciente';
-        this.patientId = userData.id || 1;
+        this.userId = userData.id || 0;  // ← Guardar el userId
+        console.log('UserId obtenido:', this.userId);
+
+        this.loadData();
       } catch (e) {
         this.patientName = 'Paciente';
-        this.patientId = 1;
+        this.userId = 0;
       }
     }
   }
 
   loadData(): void {
-    // Cargar doctores del admin
-    const storedDoctors = localStorage.getItem('doctors');
-    if (storedDoctors) {
-      this.doctors = JSON.parse(storedDoctors);
-    } else {
-      // Doctores de ejemplo
-      this.doctors = [
-        { id: 1, name: 'Dr. Juan Pérez', email: 'juan@meditek.com', phone: '987654321', specialtyId: 1, specialtyName: 'Medicina General' },
-        { id: 2, name: 'Dra. María López', email: 'maria@meditek.com', phone: '987654322', specialtyId: 2, specialtyName: 'Cardiología' },
-        { id: 3, name: 'Dr. Carlos Ruiz', email: 'carlos@meditek.com', phone: '987654323', specialtyId: 3, specialtyName: 'Pediatría' }
-      ];
-    }
-    this.availableDoctors = [...this.doctors];
+    this.loadDoctors();
+    this.loadAppointments();  // ← Este método usará this.userId
+    this.loadTreatments();
+  }
 
-    // Cargar citas del paciente
-    const storedAppointments = localStorage.getItem('paciente_appointments');
-    if (storedAppointments) {
-      this.appointments = JSON.parse(storedAppointments).filter((a: Appointment) => a.patientId === this.patientId);
-    } else {
-      this.appointments = [];
-    }
 
-    // Cargar tratamientos del paciente
-    const storedTreatments = localStorage.getItem('medico_treatments');
-    if (storedTreatments) {
-      const allTreatments = JSON.parse(storedTreatments);
-      this.treatments = allTreatments.filter((t: Treatment) => t.patientId === this.patientId && t.status === 'active');
-    } else {
-      this.treatments = [];
-    }
+  loadDoctors(): void {
+    this.http.get<any[]>(`${this.apiUrl}/api/doctors`).subscribe({
+      next: (data) => {
+        this.doctors = data.map(doctor => ({
+          id: doctor.id,
+          name: doctor.user?.name || doctor.name,
+          email: doctor.user?.email || '',
+          phone: doctor.user?.phone || '',
+          specialtyId: doctor.specialtyId,
+          specialtyName: doctor.specialty?.name || doctor.specialtyName
+        }));
+        this.availableDoctors = [...this.doctors];
+      },
+      error: (error) => console.error('Error loading doctors:', error)
+    });
+  }
 
-    this.updateCalendar();
+  loadAppointments(): void {
+    // Usar userId en lugar de patientId
+    this.http.get<Appointment[]>(`${this.apiUrl}/api/appointments/patient/${this.userId}`).subscribe({
+      next: (data) => {
+        this.appointments = data;
+        this.updateCalendar();
+      },
+      error: (error) => console.error('Error loading appointments:', error)
+    });
+  }
+
+  loadTreatments(): void {
+    this.http.get<any>(`${this.apiUrl}/api/patients/by-user/${this.userId}`).subscribe({
+      next: (data) => {
+        this.treatments = data.treatments || [];
+        this.updateCalendar();
+      },
+      error: (error) => console.error('Error loading treatments:', error)
+    });
   }
 
   updateCalendar(): void {
@@ -216,47 +232,45 @@ export class DashboardPacienteComponent implements OnInit {
       return;
     }
 
-    const doctor = this.doctors.find(d => d.id === this.appointmentForm.doctorId);
+    const dateTime = new Date(`${this.appointmentForm.date}T${this.appointmentForm.time}`);
 
-    const newAppointment: Appointment = {
-      id: Math.max(0, ...this.appointments.map(a => a.id), 0) + 1,
-      patientId: this.patientId,
-      patientName: this.patientName,
+    const appointmentData = {
+      userId: this.userId,  // ← Ahora this.userId SÍ existe
       doctorId: this.appointmentForm.doctorId,
-      doctorName: doctor?.name || '',
-      specialtyName: doctor?.specialtyName || '',
-      date: this.appointmentForm.date,
-      time: this.appointmentForm.time,
+      date: dateTime.toISOString(),
       reason: this.appointmentForm.reason,
-      status: 'pending',
-      createdAt: new Date().toISOString()
+      status: 'pending'
     };
 
-    this.appointments.push(newAppointment);
-    this.saveAppointments();
-    this.updateCalendar();
-    this.closeAppointmentModal();
-    alert('✅ Cita reservada exitosamente. Esperando confirmación del médico.');
-  }
+    console.log('Enviando cita:', appointmentData);
 
-  saveAppointments(): void {
-    // Guardar todas las citas (no solo las del paciente)
-    const storedAllAppointments = localStorage.getItem('paciente_appointments');
-    let allAppointments: Appointment[] = storedAllAppointments ? JSON.parse(storedAllAppointments) : [];
-
-    // Reemplazar o agregar
-    const filtered = allAppointments.filter(a => a.id !== this.appointments.find(ap => ap.id === a.id)?.id);
-    allAppointments = [...filtered, ...this.appointments];
-
-    localStorage.setItem('paciente_appointments', JSON.stringify(allAppointments));
+    this.http.post<Appointment>(`${this.apiUrl}/api/appointments`, appointmentData).subscribe({
+      next: (newAppointment) => {
+        this.appointments.push(newAppointment);
+        this.updateCalendar();
+        this.closeAppointmentModal();
+        alert('✅ Cita reservada exitosamente. Esperando confirmación del médico.');
+      },
+      error: (error) => {
+        console.error('Error creating appointment:', error);
+        alert('Error al reservar la cita: ' + (error.error?.message || 'Intente nuevamente'));
+      }
+    });
   }
 
   cancelAppointment(appointment: Appointment): void {
     if (confirm('¿Estás seguro de cancelar esta cita?')) {
-      appointment.status = 'cancelled';
-      this.saveAppointments();
-      this.updateCalendar();
-      alert('❌ Cita cancelada');
+      this.http.put(`${this.apiUrl}/api/appointments/${appointment.id}/status`, { status: 'cancelled' }).subscribe({
+        next: () => {
+          appointment.status = 'cancelled';
+          this.updateCalendar();
+          alert('❌ Cita cancelada');
+        },
+        error: (error) => {
+          console.error('Error cancelling appointment:', error);
+          alert('Error al cancelar la cita');
+        }
+      });
     }
   }
 
@@ -269,13 +283,25 @@ export class DashboardPacienteComponent implements OnInit {
 
   confirmReschedule(): void {
     if (this.selectedAppointment && this.rescheduleDate && this.rescheduleTime) {
-      this.selectedAppointment.date = this.rescheduleDate;
-      this.selectedAppointment.time = this.rescheduleTime;
-      this.selectedAppointment.status = 'pending';
-      this.saveAppointments();
-      this.updateCalendar();
-      this.closeRescheduleModal();
-      alert('📅 Cita reprogramada exitosamente');
+      const dateTime = new Date(`${this.rescheduleDate}T${this.rescheduleTime}`);
+
+      this.http.put(`${this.apiUrl}/api/appointments/${this.selectedAppointment.id}`, {
+        date: dateTime.toISOString(),
+        status: 'pending'
+      }).subscribe({
+        next: (updated: any) => {
+          this.selectedAppointment!.date = updated.date;
+          this.selectedAppointment!.time = updated.time;
+          this.selectedAppointment!.status = updated.status;
+          this.updateCalendar();
+          this.closeRescheduleModal();
+          alert('📅 Cita reprogramada exitosamente');
+        },
+        error: (error) => {
+          console.error('Error rescheduling appointment:', error);
+          alert('Error al reprogramar la cita');
+        }
+      });
     }
   }
 
@@ -331,12 +357,10 @@ export class DashboardPacienteComponent implements OnInit {
     }
   }
 
-  // Agrega este método para la fecha mínima
   todayDate(): string {
     return new Date().toISOString().split('T')[0];
   }
 
-  // Agrega este método para el progreso del tratamiento
   getTreatmentProgress(treatment: Treatment): number {
     const start = new Date(treatment.startDate).getTime();
     const end = new Date(treatment.endDate).getTime();

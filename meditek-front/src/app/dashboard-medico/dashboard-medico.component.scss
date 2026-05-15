@@ -810,3 +810,96 @@
         font-family: monospace;
     }
 }
+
+// En dashboard-medico.component.scss
+.appointments-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.appointment-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.appointment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #eee;
+}
+
+.patient-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+
+    strong {
+        font-size: 1.1rem;
+        color: #2c3e50;
+    }
+
+    .specialty {
+        font-size: 0.85rem;
+        color: #7f8c8d;
+    }
+}
+
+.appointment-body {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+
+    p {
+        margin: 0;
+        font-size: 0.9rem;
+
+        span {
+            margin-right: 0.5rem;
+        }
+    }
+}
+
+.appointment-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    padding-top: 0.5rem;
+    border-top: 1px solid #eee;
+}
+
+.btn-success {
+    background: #27ae60;
+    color: white;
+
+    &:hover {
+        background: #229954;
+    }
+}
+
+.btn-complete {
+    background: #27ae60;
+    color: white;
+    
+    &:hover {
+        background: #229954;
+    }
+}
+
+.completed-badge {
+    color: #27ae60;
+    font-weight: bold;
+    padding: 0.5rem;
+}
+
+.cancelled-badge {
+    color: #e74c3c;
+    font-weight: bold;
+    padding: 0.5rem;
+}

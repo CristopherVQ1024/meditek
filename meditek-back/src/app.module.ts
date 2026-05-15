@@ -14,11 +14,12 @@ import { TreatmentsModule } from './treatments/treatments.module';
 import { ReferralsModule } from './referrals/referrals.module';
 import { MedicalHistoryModule } from './medical-history/medical-history.module';
 import { PrescriptionsModule } from './prescriptions/prescriptions.module';
+import { AppointmentsModule } from './appointments/appointments.module';
 
 @Module({
   imports: [PrismaModule, AuthModule, FirebaseModule, ConfigModule.forRoot({
     isGlobal: true,
-  }), AuthModule, SpecialtiesModule, DoctorsModule, ProductsModule, PatientsModule, ConsultationsModule, TreatmentsModule, ReferralsModule, MedicalHistoryModule, PrescriptionsModule,],
+  }), AuthModule, SpecialtiesModule, DoctorsModule, ProductsModule, PatientsModule, ConsultationsModule, TreatmentsModule, ReferralsModule, MedicalHistoryModule, PrescriptionsModule, AppointmentsModule,],
   controllers: [AppController],
   providers: [AppService],
 })

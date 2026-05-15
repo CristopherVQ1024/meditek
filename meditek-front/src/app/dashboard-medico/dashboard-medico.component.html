@@ -32,6 +32,10 @@
                 <span class="icon">🔄</span>
                 <span>Transferencias</span>
             </button>
+            <button (click)="changeTab('appointments')" [class.active]="activeTab === 'appointments'">
+                <span class="icon">📅</span>
+                <span>Citas</span>
+            </button>
         </nav>
 
         <button class="logout-btn" (click)="logout()">
@@ -139,11 +143,11 @@
 
         <!-- TRATAMIENTOS -->
         <div *ngIf="activeTab === 'treatments'" class="tab-content">
-            <div class="section-header">
+            <!--<div class="section-header">
                 <button class="btn-primary" (click)="openTreatmentModal()">
                     + Nuevo Tratamiento
                 </button>
-            </div>
+            </div>-->
 
             <div class="treatments-grid">
                 <div class="treatment-card" *ngFor="let treatment of treatments">
@@ -195,6 +199,65 @@
                 </div>
                 <div *ngIf="referrals.length === 0" class="empty-state">
                     <p>No hay transferencias pendientes</p>
+                </div>
+            </div>
+        </div>
+        <!-- CITAS PROGRAMADAS -->
+        <div *ngIf="activeTab === 'appointments'" class="tab-content">
+            <div class="section-header">
+                <h3>📅 Citas Programadas</h3>
+            </div>
+
+            <div class="appointments-list">
+                <div class="appointment-card" *ngFor="let appointment of appointments">
+                    <div class="appointment-header">
+                        <div class="patient-info">
+                            <strong>👤 {{ appointment.patientName }}</strong>
+                            <span class="specialty">{{ appointment.specialtyName }}</span>
+                        </div>
+                        <span class="status-badge" [class]="getAppointmentStatusClass(appointment.status)">
+                            {{ getAppointmentStatusText(appointment.status) }}
+                        </span>
+                    </div>
+                    <div class="appointment-body">
+                        <p><span>📅</span> Fecha: {{ appointment.date | date:'dd/MM/yyyy' }}</p>
+                        <p><span>⏰</span> Hora: {{ appointment.time }}</p>
+                        <p><span>📝</span> Motivo: {{ appointment.reason || 'Consulta general' }}</p>
+                    </div>
+                    <div class="appointment-actions">
+                        <!-- Cita pendiente -->
+                        <ng-container *ngIf="appointment.status === 'pending'">
+                            <button class="btn-success" (click)="confirmAppointment(appointment)">✅ Confirmar</button>
+                            <button class="btn-danger" (click)="cancelAppointmentByDoctor(appointment)">❌
+                                Rechazar</button>
+                        </ng-container>
+
+                        <!-- Cita confirmada -->
+                        <ng-container *ngIf="appointment.status === 'confirmed'">
+                            <button class="btn-primary" (click)="startAppointment(appointment)">🩺 Iniciar
+                                Consulta</button>
+                        </ng-container>
+
+                        <!-- Cita en atención -->
+                        <ng-container *ngIf="appointment.status === 'in-progress'">
+                            <button class="btn-complete" (click)="completeAppointment(appointment)">✅ Finalizar
+                                Consulta</button>
+                        </ng-container>
+
+                        <!-- Cita completada -->
+                        <ng-container *ngIf="appointment.status === 'completed'">
+                            <span class="completed-badge">✓ Consulta finalizada</span>
+                        </ng-container>
+
+                        <!-- Cita cancelada -->
+                        <ng-container *ngIf="appointment.status === 'cancelled'">
+                            <span class="cancelled-badge">✗ Cita cancelada</span>
+                        </ng-container>
+                    </div>
+                </div>
+
+                <div *ngIf="appointments.length === 0" class="empty-state">
+                    <p>No hay citas programadas</p>
                 </div>
             </div>
         </div>

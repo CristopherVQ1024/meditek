@@ -3,6 +3,22 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 
+
+// Agrega esta interfaz junto a las otras
+interface Appointment {
+  id: number;
+  patientId: number;
+  patientName: string;
+  doctorId: number;
+  doctorName: string;
+  specialtyName: string;
+  date: string;
+  time: string;
+  reason: string;
+  status: 'pending' | 'confirmed' | 'in-progress' | 'completed' | 'cancelled';
+  createdAt: string;
+}
+
 // Interfaces actualizadas para el backend
 interface Patient {
   id: number;
@@ -73,7 +89,7 @@ interface Treatment {
   status: string;
   createdAt: string;
   updatedAt: string;
-  patient?: {  
+  patient?: {
     id: number;
     userId: number;
     user?: {
@@ -83,7 +99,7 @@ interface Treatment {
       phone?: string;
     };
   };
-  doctor?: {  
+  doctor?: {
     id: number;
     user: {
       name: string;
@@ -184,6 +200,9 @@ export class DashboardMedicoComponent implements OnInit {
     endDate: ''
   };
 
+  //Citas
+  appointments: Appointment[] = [];
+
   newMedication: Medication = { name: '', dosage: '', frequency: '', duration: 0 };
 
   // Recetas
@@ -240,6 +259,7 @@ export class DashboardMedicoComponent implements OnInit {
         this.loadConsultations();
         this.loadTreatments();
         this.loadReferrals();
+        this.loadAppointments();
       },
       error: (error) => console.error('Error loading doctor:', error)
     });
@@ -707,4 +727,98 @@ export class DashboardMedicoComponent implements OnInit {
     const patient = this.patients.find(p => p.id === patientId);
     return patient?.user.name || 'Desconocido';
   }
+
+  loadAppointments(): void {
+    if (!this.doctorId) return;
+
+    this.http.get<Appointment[]>(`${this.apiUrl}/appointments/doctor/${this.doctorId}`).subscribe({
+      next: (data) => {
+        this.appointments = data;
+        console.log('Citas cargadas:', this.appointments);
+      },
+      error: (error) => console.error('Error loading appointments:', error)
+    });
+  }
+
+  getAppointmentStatusText(status: string): string {
+    const statusMap: { [key: string]: string } = {
+      'pending': 'Pendiente',
+      'confirmed': 'Confirmada',
+      'in-progress': 'En atención',
+      'completed': 'Finalizada',
+      'cancelled': 'Cancelada'
+    };
+    return statusMap[status] || status;
+  }
+
+  getAppointmentStatusClass(status: string): string {
+    const classMap: { [key: string]: string } = {
+      'pending': 'pending',
+      'confirmed': 'confirmed',
+      'in-progress': 'in-progress',
+      'completed': 'completed',
+      'cancelled': 'cancelled'
+    };
+    return classMap[status] || 'pending';
+  }
+
+  confirmAppointment(appointment: Appointment): void {
+    this.http.put(`${this.apiUrl}/appointments/${appointment.id}/status`, { status: 'confirmed' }).subscribe({
+      next: () => {
+        appointment.status = 'confirmed';
+        alert(`✅ Cita confirmada para ${appointment.patientName} el ${appointment.date} a las ${appointment.time}`);
+      },
+      error: (error) => console.error('Error confirming appointment:', error)
+    });
+  }
+
+  cancelAppointmentByDoctor(appointment: Appointment): void {
+    if (confirm(`¿Cancelar la cita de ${appointment.patientName}?`)) {
+      this.http.put(`${this.apiUrl}/appointments/${appointment.id}/status`, { status: 'cancelled' }).subscribe({
+        next: () => {
+          appointment.status = 'cancelled';
+          alert('❌ Cita cancelada');
+          this.loadAppointments(); // Recargar la lista
+        },
+        error: (error) => console.error('Error cancelling appointment:', error)
+      });
+    }
+  }
+
+  startAppointment(appointment: Appointment): void {
+    // Actualizar estado de la cita
+    this.http.put(`${this.apiUrl}/appointments/${appointment.id}/status`, { status: 'in-progress' }).subscribe({
+      next: () => {
+        appointment.status = 'in-progress';
+
+        // Abrir modal de consulta con el paciente seleccionado
+        const patient = this.patients.find(p => p.id === appointment.patientId);
+        if (patient) {
+          this.consultationForm.patientId = patient.id;
+          this.openConsultationModal(patient);
+        }
+      },
+      error: (error) => console.error('Error starting appointment:', error)
+    });
+  }
+
+  // dashboard-medico.component.ts
+
+  // Método para finalizar la cita (cambiar a completed)
+  completeAppointment(appointment: Appointment): void {
+    if (confirm(`¿Finalizar la consulta de ${appointment.patientName}?`)) {
+      this.http.put(`${this.apiUrl}/appointments/${appointment.id}/status`, { status: 'completed' }).subscribe({
+        next: () => {
+          appointment.status = 'completed';
+          alert(`✅ Consulta finalizada para ${appointment.patientName}`);
+          this.loadAppointments(); // Recargar la lista          
+        },
+        error: (error) => {
+          console.error('Error completing appointment:', error);
+          alert('Error al finalizar la consulta');
+        }
+      });
+    }
+  }
+ 
 }

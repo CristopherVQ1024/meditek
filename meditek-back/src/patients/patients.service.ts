@@ -162,4 +162,60 @@ export class PatientsService {
             data
         });
     }
+
+    // Agrega esto al final de PatientsService (antes de la última llave)
+
+    async findByUserId(userId: number) {
+        const patient = await this.prisma.patient.findFirst({
+            where: { userId },
+            include: {
+                user: true,
+                medicalHistory: true,
+                consultations: {
+                    include: {
+                        doctor: {
+                            include: {
+                                user: true,
+                                specialty: true
+                            }
+                        }
+                    },
+                    orderBy: { date: 'desc' },
+                    take: 10
+                },
+                treatments: {
+                    where: { status: 'active' },
+                    include: {
+                        doctor: {
+                            include: {
+                                user: true
+                            }
+                        }
+                    },
+                    orderBy: { startDate: 'desc' }
+                },
+                prescriptions: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 5
+                },
+                referrals: {
+                    where: { status: 'pending' },
+                    include: {
+                        doctor: {
+                            include: {
+                                user: true
+                            }
+                        },
+                        toSpecialty: true
+                    }
+                }
+            }
+        });
+
+        if (!patient) {
+            throw new NotFoundException(`Paciente con userId ${userId} no encontrado`);
+        }
+
+        return patient;
+    }
 }
