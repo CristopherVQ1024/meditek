@@ -15,11 +15,14 @@ import { ReferralsModule } from './referrals/referrals.module';
 import { MedicalHistoryModule } from './medical-history/medical-history.module';
 import { PrescriptionsModule } from './prescriptions/prescriptions.module';
 import { AppointmentsModule } from './appointments/appointments.module';
+import { OrdersModule } from './orders/orders.module';
+import { PdfModule } from './pdf/pdf.module';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [PrismaModule, AuthModule, FirebaseModule, ConfigModule.forRoot({
     isGlobal: true,
-  }), AuthModule, SpecialtiesModule, DoctorsModule, ProductsModule, PatientsModule, ConsultationsModule, TreatmentsModule, ReferralsModule, MedicalHistoryModule, PrescriptionsModule, AppointmentsModule,],
+  }), AuthModule, SpecialtiesModule, DoctorsModule, ProductsModule, PatientsModule, ConsultationsModule, TreatmentsModule, ReferralsModule, MedicalHistoryModule, PrescriptionsModule, AppointmentsModule, OrdersModule, PdfModule, EmailModule,],
   controllers: [AppController],
   providers: [AppService],
 })

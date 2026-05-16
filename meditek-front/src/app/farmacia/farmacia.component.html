@@ -136,3 +136,78 @@
         </div>
     </div>
 </div>
+
+<!-- Modal de Pago -->
+<div class="modal" *ngIf="showPaymentModal" (click)="closeModalOnBackdrop($event)">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Procesar Pago</h3>
+            <button class="close-btn" (click)="closePaymentModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="order-summary">
+                <h4>Resumen del pedido</h4>
+                <div class="summary-total">
+                    <strong>Total a pagar: {{ formatPrice(getCartTotal()) }}</strong>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Método de pago</label>
+                <select [(ngModel)]="paymentForm.method" class="form-control">
+                    <option *ngFor="let method of paymentMethods" [value]="method.value">
+                        {{ method.label }}
+                    </option>
+                </select>
+            </div>
+
+            <!-- Datos de tarjeta (solo si selecciona tarjeta) -->
+            <div *ngIf="paymentForm.method === 'CARD'">
+                <div class="form-group">
+                    <label>Número de tarjeta</label>
+                    <input type="text" [(ngModel)]="paymentForm.cardNumber" class="form-control"
+                        placeholder="1234 5678 9012 3456" maxlength="19">
+                </div>
+                <div class="form-group">
+                    <label>Nombre en la tarjeta</label>
+                    <input type="text" [(ngModel)]="paymentForm.cardName" class="form-control"
+                        placeholder="Como aparece en la tarjeta">
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label>Fecha expiración</label>
+                            <input type="text" [(ngModel)]="paymentForm.expiryDate" class="form-control"
+                                placeholder="MM/AA">
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <label>CVV</label>
+                            <input type="password" [(ngModel)]="paymentForm.cvv" class="form-control" placeholder="123"
+                                maxlength="4">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Instrucciones para Yape/Plin -->
+            <div *ngIf="paymentForm.method === 'YAPE' || paymentForm.method === 'PLIN'" class="payment-instructions">
+                <div class="alert-info">
+                    <p><strong>📱 Instrucciones para {{ paymentForm.method === 'YAPE' ? 'Yape' : 'Plin' }}:</strong></p>
+                    <p>1. Abre la aplicación de {{ paymentForm.method === 'YAPE' ? 'Yape' : 'Plin' }}</p>
+                    <p>2. Escanea el código QR o paga al número: <strong>987 654 321</strong></p>
+                    <p>3. Ingresa el monto: <strong>{{ formatPrice(getCartTotal()) }}</strong></p>
+                    <p>4. Confirma el pago y presiona "Ya pagué"</p>
+                </div>
+                <button class="btn-primary" style="margin-top: 15px;" (click)="processPayment()">
+                    Ya pagué
+                </button>
+            </div>
+        </div>
+        <div class="modal-footer" *ngIf="paymentForm.method !== 'YAPE' && paymentForm.method !== 'PLIN'">
+            <button class="btn-secondary" (click)="closePaymentModal()">Cancelar</button>
+            <button class="btn-primary" (click)="processPayment()">Pagar</button>
+        </div>
+    </div>
+</div>

@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
+import { HttpClientModule } from '@angular/common/http';
 
 interface Product {
   id: number;
@@ -11,10 +13,15 @@ interface Product {
   createdAt: string;
 }
 
+interface CartItem {
+  product: Product;
+  quantity: number;
+}
+
 @Component({
   selector: 'app-farmacia',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, HttpClientModule],
   templateUrl: './farmacia.component.html',
   styleUrls: ['./farmacia.component.scss']
 })
@@ -22,10 +29,12 @@ export class FarmaciaComponent implements OnInit {
   products: Product[] = [];
   filteredProducts: Product[] = [];
   searchTerm: string = '';
-  selectedCategory: string = 'all';
-  cart: { product: Product, quantity: number }[] = [];
+  cart: CartItem[] = [];
   showCart: boolean = false;
   showCheckoutModal: boolean = false;
+  showPaymentModal: boolean = false;
+  currentOrder: any = null;
+
   checkoutForm = {
     name: '',
     email: '',
@@ -33,31 +42,59 @@ export class FarmaciaComponent implements OnInit {
     address: ''
   };
 
-  categories = ['all', 'Medicamentos', 'Equipos', 'Insumos'];
+  paymentForm = {
+    method: 'CASH' as 'CASH' | 'CARD' | 'YAPE' | 'PLIN' | 'TRANSFER',
+    cardNumber: '',
+    cardName: '',
+    expiryDate: '',
+    cvv: ''
+  };
 
-  constructor() { }
+  paymentMethods = [
+    { value: 'CASH', label: '💰 Efectivo (Pago contra entrega)' },
+    { value: 'CARD', label: '💳 Tarjeta de Crédito/Débito' },
+    { value: 'YAPE', label: '📱 Yape' },
+    { value: 'PLIN', label: '📱 Plin' },
+    { value: 'TRANSFER', label: '🏦 Transferencia Bancaria' }
+  ];
+
+  constructor(private http: HttpClient) { }
 
   ngOnInit(): void {
     this.loadProducts();
     this.loadCart();
+    this.loadUserData();
   }
 
   loadProducts(): void {
-    // Cargar productos del admin (farmacia)
-    const storedProducts = localStorage.getItem('products');
-    if (storedProducts) {
-      this.products = JSON.parse(storedProducts);
-    } else {
-      // Productos de ejemplo si no hay
-      this.products = [
-        { id: 1, name: 'Paracetamol 500mg', price: 15.00, stock: 100, description: 'Analgésico y antipirético', createdAt: new Date().toISOString() },
-        { id: 2, name: 'Ibuprofeno 400mg', price: 25.00, stock: 80, description: 'Antiinflamatorio', createdAt: new Date().toISOString() },
-        { id: 3, name: 'Amoxicilina 500mg', price: 35.00, stock: 50, description: 'Antibiótico', createdAt: new Date().toISOString() },
-        { id: 4, name: 'Termómetro Digital', price: 45.00, stock: 30, description: 'Termómetro digital de alta precisión', createdAt: new Date().toISOString() },
-        { id: 5, name: 'Mascarillas KN95', price: 8.00, stock: 200, description: 'Protección respiratoria', createdAt: new Date().toISOString() }
-      ];
+    this.http.get<any[]>('http://localhost:3000/api/products').subscribe({
+      next: (products) => {
+        this.products = products;
+        this.filterProducts();
+      },
+      error: (error) => {
+        console.error('Error cargando productos:', error);
+        // Datos de ejemplo si falla la API
+        this.products = [
+          { id: 1, name: 'Paracetamol 500mg', price: 15.00, stock: 100, description: 'Analgésico y antipirético', createdAt: new Date().toISOString() },
+          { id: 2, name: 'Ibuprofeno 400mg', price: 25.00, stock: 80, description: 'Antiinflamatorio', createdAt: new Date().toISOString() },
+          { id: 3, name: 'Amoxicilina 500mg', price: 35.00, stock: 50, description: 'Antibiótico', createdAt: new Date().toISOString() }
+        ];
+        this.filterProducts();
+      }
+    });
+  }
+
+  loadUserData(): void {
+    const user = localStorage.getItem('user');
+    if (user) {
+      try {
+        const userData = JSON.parse(user);
+        this.checkoutForm.name = userData.name || '';
+        this.checkoutForm.email = userData.email || '';
+        this.checkoutForm.phone = userData.phone || '';
+      } catch (e) { }
     }
-    this.filterProducts();
   }
 
   loadCart(): void {
@@ -123,17 +160,7 @@ export class FarmaciaComponent implements OnInit {
       alert('El carrito está vacío');
       return;
     }
-
-    // Cargar datos del usuario logueado
-    const user = localStorage.getItem('user');
-    if (user) {
-      try {
-        const userData = JSON.parse(user);
-        this.checkoutForm.name = userData.name || '';
-        this.checkoutForm.email = userData.email || '';
-      } catch (e) { }
-    }
-
+    this.loadUserData();
     this.showCheckoutModal = true;
   }
 
@@ -143,68 +170,113 @@ export class FarmaciaComponent implements OnInit {
       return;
     }
 
-    // Actualizar stock de productos
-    this.cart.forEach(cartItem => {
-      const product = this.products.find(p => p.id === cartItem.product.id);
-      if (product) {
-        product.stock -= cartItem.quantity;
-      }
-    });
-
-    // Guardar productos actualizados
-    localStorage.setItem('products', JSON.stringify(this.products));
-
-    // Generar comprobante
-    const order = {
-      id: Date.now(),
-      date: new Date().toISOString(),
-      customer: this.checkoutForm,
-      items: [...this.cart],
-      total: this.getCartTotal()
+    const orderData = {
+      items: this.cart.map(item => ({
+        productId: Number(item.product.id),     
+        quantity: Number(item.quantity),        
+        price: Number(item.product.price)       
+      })),
+      customerInfo: {
+        name: this.checkoutForm.name,
+        email: this.checkoutForm.email,
+        phone: this.checkoutForm.phone,
+        address: this.checkoutForm.address,
+        total: this.getCartTotal()
+      },
+      paymentMethod: this.paymentForm.method
     };
 
-    // Guardar historial de pedidos
-    const orders = localStorage.getItem('farmacia_orders');
-    const allOrders = orders ? JSON.parse(orders) : [];
-    allOrders.push(order);
-    localStorage.setItem('farmacia_orders', JSON.stringify(allOrders));
+    this.http.post('http://localhost:3000/api/orders', orderData).subscribe({
+      next: (order: any) => {
+        this.currentOrder = order;
+        this.closeCheckout();
 
-    // Limpiar carrito
-    this.cart = [];
-    this.saveCart();
-
-    // Simular envío de correo
-    alert(`📧 ¡Pedido realizado con éxito!\n\nResumen:\n${this.generateOrderSummary(order)}\n\nSe ha enviado un correo con los detalles a ${this.checkoutForm.email}\n\n📦 Tu pedido será entregado en: ${this.checkoutForm.address}`);
-
-    this.closeCheckout();
-    this.loadProducts();
-    this.filterProducts();
+        if (this.paymentForm.method === 'CASH') {
+          // Pago contra entrega, confirmar directamente
+          this.http.post(`http://localhost:3000/api/orders/${order.id}/pay`, {}).subscribe({
+            next: (result: any) => {
+              alert('✅ ¡Pedido realizado con éxito!\nSe ha enviado el comprobante a tu correo.');
+              this.clearCart();
+              this.loadProducts();
+            },
+            error: (error) => {
+              console.error('Error al procesar pago:', error);
+              alert('Error al procesar el pedido');
+            }
+          });
+        } else {
+          // Mostrar modal de pago para otros métodos
+          this.showPaymentModal = true;
+        }
+      },
+      error: (error) => {
+        console.error('Error al crear orden:', error);
+        alert('Error al crear el pedido. Verifica el stock disponible.');
+      }
+    });
   }
 
-  generateOrderSummary(order: any): string {
-    let summary = '';
-    order.items.forEach((item: any) => {
-      summary += `${item.quantity}x ${item.product.name} - S/ ${(item.product.price * item.quantity).toFixed(2)}\n`;
+  processPayment(): void {
+    if (!this.currentOrder) return;
+
+    // Validar datos de tarjeta si es necesario
+    if (this.paymentForm.method === 'CARD') {
+      if (!this.paymentForm.cardNumber || !this.paymentForm.cardName ||
+        !this.paymentForm.expiryDate || !this.paymentForm.cvv) {
+        alert('Por favor complete todos los datos de la tarjeta');
+        return;
+      }
+    }
+
+    const paymentData = {
+      method: this.paymentForm.method,
+      ...(this.paymentForm.method === 'CARD' && {
+        cardNumber: this.paymentForm.cardNumber,
+        cardName: this.paymentForm.cardName,
+        expiryDate: this.paymentForm.expiryDate,
+        cvv: this.paymentForm.cvv
+      })
+    };
+
+    this.http.post(`http://localhost:3000/api/orders/${this.currentOrder.id}/pay`, paymentData).subscribe({
+      next: (result: any) => {
+        this.showPaymentModal = false;
+        alert('✅ ¡Pago procesado con éxito!\nSe ha enviado el comprobante a tu correo.');
+        this.clearCart();
+        this.loadProducts();
+        this.currentOrder = null;
+        this.resetPaymentForm();
+      },
+      error: (error) => {
+        console.error('Error en pago:', error);
+        alert('❌ Error al procesar el pago. Intente nuevamente.');
+      }
     });
-    summary += `\nTotal: S/ ${order.total.toFixed(2)}`;
-    return summary;
+  }
+
+  resetPaymentForm(): void {
+    this.paymentForm = {
+      method: 'CASH',
+      cardNumber: '',
+      cardName: '',
+      expiryDate: '',
+      cvv: ''
+    };
   }
 
   clearCart(): void {
-    if (confirm('¿Vaciar carrito completamente?')) {
-      this.cart = [];
-      this.saveCart();
-    }
+    this.cart = [];
+    this.saveCart();
   }
 
   closeCheckout(): void {
     this.showCheckoutModal = false;
-    this.checkoutForm = {
-      name: '',
-      email: '',
-      phone: '',
-      address: ''
-    };
+  }
+
+  closePaymentModal(): void {
+    this.showPaymentModal = false;
+    this.currentOrder = null;
+    this.resetPaymentForm();
   }
 
   toggleCart(): void {
@@ -217,7 +289,8 @@ export class FarmaciaComponent implements OnInit {
 
   closeModalOnBackdrop(event: MouseEvent): void {
     if ((event.target as HTMLElement).classList.contains('modal')) {
-      this.showCheckoutModal = false;
+      this.closeCheckout();
+      this.closePaymentModal();
     }
   }
 }
