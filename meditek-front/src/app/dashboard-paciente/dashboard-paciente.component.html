@@ -26,6 +26,10 @@
                 <span class="icon">💊</span>
                 <span>Farmacia</span>
             </button>
+            <button (click)="openMedicalHistory()">
+                <span class="icon">📋</span>
+                <span>Mi Historial</span>
+            </button>
         </nav>
 
         <button class="logout-btn" (click)="logout()">
@@ -237,6 +241,130 @@
         <div class="modal-footer">
             <button class="btn-secondary" (click)="closeRescheduleModal()">Cancelar</button>
             <button class="btn-primary" (click)="confirmReschedule()">Confirmar</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL HISTORIAL MÉDICO -->
+<div class="modal" *ngIf="showMedicalHistoryModal" (click)="closeModalOnBackdrop($event, 'medicalHistory')">
+    <div class="modal-content modal-large modal-medical-history">
+        <div class="modal-header">
+            <h3>📋 Mi Historial Clínico</h3>
+            <div class="modal-actions">
+                <!--<button class="btn-edit" (click)="editMedicalHistory()" *ngIf="!isEditingMedicalHistory">
+                    ✏️ Editar
+                </button>-->
+                <button class="close-btn" (click)="closeMedicalHistoryModal()">×</button>
+            </div>
+        </div>
+
+        <div class="modal-body" *ngIf="!isEditingMedicalHistory && medicalHistory">
+            <!-- Vista normal -->
+            <div class="medical-history-view">
+                <div class="history-section">
+                    <h4>🏥 Enfermedades Crónicas</h4>
+                    <div class="history-tags">
+                        <span class="tag" *ngFor="let disease of medicalHistory.chronicDiseases">
+                            {{ disease }}
+                        </span>
+                        <span *ngIf="!medicalHistory.chronicDiseases?.length" class="empty-text">
+                            No registradas
+                        </span>
+                    </div>
+                </div>
+
+                <div class="history-section">
+                    <h4>🔪 Cirugías Previas</h4>
+                    <div class="history-tags">
+                        <span class="tag" *ngFor="let surgery of medicalHistory.surgeries">
+                            {{ surgery }}
+                        </span>
+                        <span *ngIf="!medicalHistory.surgeries?.length" class="empty-text">
+                            No registradas
+                        </span>
+                    </div>
+                </div>
+
+                <div class="history-section">
+                    <h4>👨‍👩‍👧 Antecedentes Familiares</h4>
+                    <p>{{ medicalHistory.familyHistory || 'No registrados' }}</p>
+                </div>
+
+                <div class="history-section">
+                    <h4>💊 Medicamentos Actuales</h4>
+                    <div class="history-tags">
+                        <span class="tag" *ngFor="let med of medicalHistory.medications">
+                            {{ med }}
+                        </span>
+                        <span *ngIf="!medicalHistory.medications?.length" class="empty-text">
+                            No registrados
+                        </span>
+                    </div>
+                </div>
+
+                <div class="history-section">
+                    <h4>🖼️ Mis Imágenes Médicas</h4>
+                    <div class="images-grid" *ngIf="medicalHistory.images?.length">
+                        <div class="image-card" *ngFor="let img of medicalHistory.images">
+                            <a [href]="getImageUrl(img.filename)" target="_blank">
+                                <div class="image-preview">
+                                    <span class="file-icon">📄</span>
+                                    <span class="file-name">{{ img.originalName }}</span>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                    <div *ngIf="!medicalHistory.images?.length" class="empty-text">
+                        No hay imágenes cargadas
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-body" *ngIf="isEditingMedicalHistory">
+            <!-- Modo edición -->
+            <div class="medical-history-form">
+                <div class="form-group">
+                    <label>Enfermedades Crónicas (separadas por coma)</label>
+                    <input type="text" [(ngModel)]="editMedicalHistoryForm.chronicDiseasesText" class="form-control"
+                        placeholder="Ej: Diabetes, Hipertensión">
+                </div>
+
+                <div class="form-group">
+                    <label>Cirugías Previas (separadas por coma)</label>
+                    <input type="text" [(ngModel)]="editMedicalHistoryForm.surgeriesText" class="form-control"
+                        placeholder="Ej: Apendicectomía, Cesárea">
+                </div>
+
+                <div class="form-group">
+                    <label>Antecedentes Familiares</label>
+                    <textarea [(ngModel)]="editMedicalHistoryForm.familyHistory" class="form-control"
+                        rows="3"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Medicamentos Actuales (separados por coma)</label>
+                    <input type="text" [(ngModel)]="editMedicalHistoryForm.medicationsText" class="form-control"
+                        placeholder="Ej: Paracetamol, Losartán">
+                </div>
+
+                <div class="form-group">
+                    <label>Subir Imágenes Médicas</label>
+                    <input type="file" #fileInput multiple accept="image/*,application/pdf"
+                        (change)="onImagesSelected($event)" class="form-control">
+                    <div class="upload-progress" *ngIf="uploadingImages">
+                        Subiendo imágenes...
+                    </div>
+                    <div class="pending-images" *ngIf="pendingImages.length">
+                        <p>📸 Imágenes pendientes: {{ pendingImages.length }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer" *ngIf="isEditingMedicalHistory">
+            <button class="btn-secondary" (click)="cancelEditMedicalHistory()">Cancelar</button>
+            <button class="btn-primary" (click)="saveMedicalHistory()">Guardar Cambios</button>
         </div>
     </div>
 </div>

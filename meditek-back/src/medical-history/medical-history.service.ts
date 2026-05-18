@@ -11,7 +11,6 @@ export class MedicalHistoryService {
         });
 
         if (!history) {
-            // Si no existe, crear uno por defecto
             const patient = await this.prisma.patient.findUnique({
                 where: { id: patientId }
             });
@@ -25,7 +24,8 @@ export class MedicalHistoryService {
                     patientId,
                     chronicDiseases: [],
                     surgeries: [],
-                    medications: []
+                    medications: [],
+                    familyHistory: ''
                 }
             });
         }
@@ -45,10 +45,10 @@ export class MedicalHistoryService {
         return this.prisma.medicalHistory.update({
             where: { patientId },
             data: {
-                chronicDiseases: data.chronicDiseases,
-                surgeries: data.surgeries,
-                familyHistory: data.familyHistory,
-                medications: data.medications
+                chronicDiseases: data.chronicDiseases || [],
+                surgeries: data.surgeries || [],
+                familyHistory: data.familyHistory || '',
+                medications: data.medications || []
             }
         });
     }

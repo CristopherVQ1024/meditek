@@ -59,6 +59,7 @@ model Patient {
   prescriptions  Prescription[]
   referrals      Referral[]  // Una sola relación
   orders         Order[]
+  medicalImages  MedicalImage[] 
 }
 
 model MedicalHistory {
@@ -214,6 +215,19 @@ model OrderItem {
   @@unique([orderId, productId])
 }
 
+model MedicalImage {
+  id           Int      @id @default(autoincrement())
+  patientId    Int
+  patient      Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  filename     String
+  originalName String
+  filePath     String
+  mimeType     String
+  fileSize     Int
+  createdAt    DateTime @default(now())
+  
+  @@index([patientId])
+}
 
 enum OrderStatus {
   PENDING

@@ -4,6 +4,21 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 
 
+// Agregar en el componente
+interface MedicalImage {
+  id: number;
+  filename: string;
+  originalName: string;
+  filePath: string;
+  mimeType: string;
+  fileSize: number;
+  createdAt: string;
+}
+
+interface MedicalHistoryExtended extends MedicalHistory {
+  images?: MedicalImage[];
+}
+
 // Agrega esta interfaz junto a las otras
 interface Appointment {
   id: number;
@@ -156,7 +171,28 @@ export class DashboardMedicoComponent implements OnInit {
   doctorId: number = 0;
   referrals: Referral[] = [];
   errorMessage: string = '';
-
+  //Imagenes
+  selectedPatientForHistory: Patient | null = null;
+  medicalHistoryData: MedicalHistoryExtended = {
+    id: 0,
+    patientId: 0,
+    chronicDiseases: [],
+    surgeries: [],
+    familyHistory: '',
+    medications: [],
+    createdAt: '',
+    updatedAt: '',
+    images: []
+  };
+  isEditingMedicalHistory: boolean = false;
+  editMedicalHistoryForm = {
+    chronicDiseasesText: '',
+    surgeriesText: '',
+    familyHistory: '',
+    medicationsText: ''
+  };
+  pendingImages: File[] = [];
+  uploadingImages: boolean = false;
   // Pacientes
   patients: Patient[] = [];
   selectedPatient: Patient | null = null;
@@ -396,16 +432,6 @@ export class DashboardMedicoComponent implements OnInit {
   closePatientModal(): void {
     this.showPatientModal = false;
     this.editingPatient = null;
-  }
-
-  viewMedicalHistory(patient: Patient): void {
-    this.http.get<MedicalHistory>(`${this.apiUrl}/medical-history/patient/${patient.id}`).subscribe({
-      next: (data) => {
-        this.selectedMedicalHistory = data;
-        this.showMedicalHistoryModal = true;
-      },
-      error: (error) => console.error('Error loading medical history:', error)
-    });
   }
 
   // ==================== CONSULTA MÉDICA ====================
@@ -820,5 +846,109 @@ export class DashboardMedicoComponent implements OnInit {
       });
     }
   }
- 
+
+  viewMedicalHistory(patient: Patient): void {
+    this.selectedPatientForHistory = patient;
+    this.loadMedicalHistory(patient.id);
+  }
+
+  loadMedicalHistory(patientId: number): void {
+    this.http.get<MedicalHistoryExtended>(`${this.apiUrl}/medical-history/patient/${patientId}`).subscribe({
+      next: (data) => {
+        this.medicalHistoryData = data;
+        this.showMedicalHistoryModal = true;
+        this.isEditingMedicalHistory = false;
+      },
+      error: (error) => {
+        console.error('Error loading medical history:', error);
+        this.errorMessage = 'Error al cargar el historial médico';
+      }
+    });
+  }
+
+  editMedicalHistory(): void {
+    this.editMedicalHistoryForm = {
+      chronicDiseasesText: this.medicalHistoryData.chronicDiseases?.join(', ') || '',
+      surgeriesText: this.medicalHistoryData.surgeries?.join(', ') || '',
+      familyHistory: this.medicalHistoryData.familyHistory || '',
+      medicationsText: this.medicalHistoryData.medications?.join(', ') || ''
+    };
+    this.pendingImages = [];
+    this.isEditingMedicalHistory = true;
+  }
+
+  cancelEditMedicalHistory(): void {
+    this.isEditingMedicalHistory = false;
+    this.pendingImages = [];
+  }
+
+  saveMedicalHistory(): void {
+    const updateData = {
+      chronicDiseases: this.editMedicalHistoryForm.chronicDiseasesText.split(',').map(s => s.trim()).filter(s => s),
+      surgeries: this.editMedicalHistoryForm.surgeriesText.split(',').map(s => s.trim()).filter(s => s),
+      familyHistory: this.editMedicalHistoryForm.familyHistory,
+      medications: this.editMedicalHistoryForm.medicationsText.split(',').map(s => s.trim()).filter(s => s)
+    };
+
+    this.http.put(`${this.apiUrl}/medical-history/patient/${this.selectedPatientForHistory?.id}`, updateData)
+      .subscribe({
+        next: async () => {
+          if (this.pendingImages.length > 0) {
+            await this.uploadMedicalImages();
+          }
+          this.loadMedicalHistory(this.selectedPatientForHistory!.id);
+          this.isEditingMedicalHistory = false;
+          this.errorMessage = '';
+        },
+        error: (error) => {
+          console.error('Error updating medical history:', error);
+          this.errorMessage = 'Error al guardar el historial médico';
+        }
+      });
+  }
+
+  onImagesSelected(event: any): void {
+    const files = Array.from(event.target.files);
+    this.pendingImages.push(...files as File[]);
+  }
+
+  async uploadMedicalImages(): Promise<void> {
+    if (!this.pendingImages.length) return;
+
+    this.uploadingImages = true;
+    const formData = new FormData();
+
+    this.pendingImages.forEach(file => {
+      formData.append('images', file);
+    });
+
+    try {
+      await this.http.post(`${this.apiUrl}/medical-history/upload-images/${this.selectedPatientForHistory?.id}`, formData).toPromise();
+      this.pendingImages = [];
+      this.loadMedicalHistory(this.selectedPatientForHistory!.id);
+    } catch (error) {
+      console.error('Error uploading images:', error);
+      this.errorMessage = 'Error al subir imágenes';
+    } finally {
+      this.uploadingImages = false;
+    }
+  }
+
+  deleteMedicalImage(imageId: number): void {
+    if (confirm('¿Eliminar esta imagen?')) {
+      this.http.delete(`${this.apiUrl}/medical-history/image/${imageId}`).subscribe({
+        next: () => {
+          this.loadMedicalHistory(this.selectedPatientForHistory!.id);
+        },
+        error: (error) => console.error('Error deleting image:', error)
+      });
+    }
+  }
+
+  closeMedicalHistoryModal(): void {
+    this.showMedicalHistoryModal = false;
+    this.selectedPatientForHistory = null;
+    this.isEditingMedicalHistory = false;
+    this.pendingImages = [];
+  }
 }
