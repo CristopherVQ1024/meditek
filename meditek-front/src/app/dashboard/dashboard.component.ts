@@ -80,7 +80,7 @@ export class DashboardComponent implements OnInit {
 
   availableIcons = ['🏥', '❤️', '👶', '🧠', '🦷', '👁️', '🩺', '💊', '🔬', '🩻', '⚕️', '🏨'];
 
-  private apiUrl = 'http://localhost:3000/api';
+  private apiUrl = 'https://meditek-backend.onrender.com/api';
 
   constructor(private http: HttpClient) { }
 

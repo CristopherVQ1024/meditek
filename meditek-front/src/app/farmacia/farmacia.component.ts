@@ -67,7 +67,7 @@ export class FarmaciaComponent implements OnInit {
   }
 
   loadProducts(): void {
-    this.http.get<any[]>('http://localhost:3000/api/products').subscribe({
+    this.http.get<any[]>('https://meditek-backend.onrender.com/api/products').subscribe({
       next: (products) => {
         this.products = products;
         this.filterProducts();
@@ -186,14 +186,14 @@ export class FarmaciaComponent implements OnInit {
       paymentMethod: this.paymentForm.method
     };
 
-    this.http.post('http://localhost:3000/api/orders', orderData).subscribe({
+    this.http.post('https://meditek-backend.onrender.com/api/orders', orderData).subscribe({
       next: (order: any) => {
         this.currentOrder = order;
         this.closeCheckout();
 
         if (this.paymentForm.method === 'CASH') {
           // Pago contra entrega, confirmar directamente
-          this.http.post(`http://localhost:3000/api/orders/${order.id}/pay`, {}).subscribe({
+          this.http.post(`https://meditek-backend.onrender.com/api/orders/${order.id}/pay`, {}).subscribe({
             next: (result: any) => {
               alert('✅ ¡Pedido realizado con éxito!\nSe ha enviado el comprobante a tu correo.');
               this.clearCart();
@@ -238,7 +238,7 @@ export class FarmaciaComponent implements OnInit {
       })
     };
 
-    this.http.post(`http://localhost:3000/api/orders/${this.currentOrder.id}/pay`, paymentData).subscribe({
+    this.http.post(`https://meditek-backend.onrender.com/api/orders/${this.currentOrder.id}/pay`, paymentData).subscribe({
       next: (result: any) => {
         this.showPaymentModal = false;
         alert('✅ ¡Pago procesado con éxito!\nSe ha enviado el comprobante a tu correo.');

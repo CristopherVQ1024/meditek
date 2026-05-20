@@ -86,7 +86,7 @@ export class DashboardPacienteComponent implements OnInit {
   activeTab: string = 'appointments';
   patientName: string = '';
   patientId: number = 0;
-  private apiUrl = 'http://localhost:3000';
+  private apiUrl = 'https://meditek-backend.onrender.com';
   //Historial medico
   showMedicalHistoryModal: boolean = false;
   medicalHistory: MedicalHistory | null = null;

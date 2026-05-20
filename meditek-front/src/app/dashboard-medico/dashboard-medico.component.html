@@ -546,7 +546,7 @@
                     <h4>🖼️ Imágenes Médicas</h4>
                     <div class="images-grid" *ngIf="medicalHistoryData.images?.length">
                         <div class="image-card" *ngFor="let img of medicalHistoryData.images">
-                            <a [href]="'http://localhost:3000/uploads/medical-images/' + img.filename" target="_blank">
+                            <a [href]="'https://meditek-backend.onrender.com/uploads/medical-images/' + img.filename" target="_blank">
                                 <div class="image-preview">
                                     <span class="file-icon">📄</span>
                                     <span class="file-name">{{ img.originalName }}</span>

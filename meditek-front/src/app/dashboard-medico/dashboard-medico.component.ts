@@ -268,7 +268,7 @@ export class DashboardMedicoComponent implements OnInit {
   showAppointmentModal: boolean = false;
   appointmentDate: string = '';
 
-  private apiUrl = 'http://localhost:3000/api';
+  private apiUrl = 'https://meditek-backend.onrender.com/api';
 
   constructor(private http: HttpClient) { }
 
