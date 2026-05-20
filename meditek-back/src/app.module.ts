@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -18,12 +19,20 @@ import { AppointmentsModule } from './appointments/appointments.module';
 import { OrdersModule } from './orders/orders.module';
 import { PdfModule } from './pdf/pdf.module';
 import { EmailModule } from './email/email.module';
+import { ReplicaInterceptor } from './prisma/replica.interceptor';
+
 
 @Module({
   imports: [PrismaModule, AuthModule, FirebaseModule, ConfigModule.forRoot({
     isGlobal: true,
   }), AuthModule, SpecialtiesModule, DoctorsModule, ProductsModule, PatientsModule, ConsultationsModule, TreatmentsModule, ReferralsModule, MedicalHistoryModule, PrescriptionsModule, AppointmentsModule, OrdersModule, PdfModule, EmailModule,],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ReplicaInterceptor,
+    },
+  ],
 })
 export class AppModule { }
