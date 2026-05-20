@@ -33,7 +33,7 @@ export interface LoginResponse {
     providedIn: 'root'
 })
 export class AuthService {
-    private apiUrl = 'https://meditek-backend.onrender.com';
+    private apiUrl = 'https://meditek-backend.onrender.com/api';
 
     constructor(
         private http: HttpClient,
