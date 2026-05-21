@@ -19,7 +19,7 @@ import { AppointmentsModule } from './appointments/appointments.module';
 import { OrdersModule } from './orders/orders.module';
 import { PdfModule } from './pdf/pdf.module';
 import { EmailModule } from './email/email.module';
-import { ReplicaInterceptor } from './prisma/replica.interceptor';
+
 
 
 @Module({
@@ -29,10 +29,6 @@ import { ReplicaInterceptor } from './prisma/replica.interceptor';
   controllers: [AppController],
   providers: [
     AppService,
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: ReplicaInterceptor,
-    },
   ],
 })
 export class AppModule { }
