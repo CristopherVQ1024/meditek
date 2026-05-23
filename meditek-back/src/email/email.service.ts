@@ -6,12 +6,11 @@ export class EmailService {
   private transporter;
 
   constructor() {
-    // Configuración simple para Gmail
     this.transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: 'cris.vera.quispe@gmail.com',
-        pass: 'ymnb ifha ifzz cjxo'
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
       }
     });
   }

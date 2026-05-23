@@ -10,7 +10,6 @@ export class ProductsController {
         return this.productsService.create(body);
     }
 
-    @Public() 
     @Get()
     findAll() {
         return this.productsService.findAll();
