@@ -11,8 +11,8 @@ export class EmailService {
       port: 587,
       secure: false,
       auth: {
-        user: process.env.BREVO_EMAIL,    
-        pass: process.env.BREVO_APIKEY    
+        user: process.env.BREVO_EMAIL,
+        pass: process.env.BREVO_APIKEY
       }
     } as any);
   }
@@ -48,8 +48,8 @@ export class EmailService {
       </div>
     `;
 
-    const { data, error } = await this.resend.emails.send({
-      from: 'MEDITEK Farmacia <onboarding@resend.dev>',
+    const info = await this.transporter.sendMail({
+      from: '"MEDITEK Farmacia" <' + process.env.BREVO_EMAIL + '>',
       to,
       subject: `✅ Comprobante de pago - Orden ${order.orderNumber}`,
       html: htmlContent,
@@ -57,18 +57,18 @@ export class EmailService {
         {
           filename: `comprobante-${order.orderNumber}.pdf`,
           content: pdfBuffer,
+          contentType: 'application/pdf'
         }
       ]
     });
 
-    if (error) throw new Error(`Error enviando correo: ${error.message}`);
-    console.log('✅ Correo enviado:', data?.id);
-    return data;
+    console.log('✅ Correo enviado:', info.messageId);
+    return info;
   }
 
   async sendTestEmail(to: string) {
-    const { data, error } = await this.resend.emails.send({
-      from: 'MEDITEK Farmacia <onboarding@resend.dev>',
+    const info = await this.transporter.sendMail({
+      from: '"MEDITEK Farmacia" <' + process.env.BREVO_EMAIL + '>',
       to,
       subject: '🧪 Prueba de correo - MEDITEK',
       html: `
@@ -78,9 +78,8 @@ export class EmailService {
       `
     });
 
-    if (error) throw new Error(`Error enviando correo: ${error.message}`);
-    console.log('✅ Correo de prueba enviado:', data?.id);
-    return data;
+    console.log('✅ Correo de prueba enviado:', info.messageId);
+    return info;
   }
 
   async sendPrescriptionEmail(to: string, prescription: any, doctorName: string) {
@@ -126,15 +125,14 @@ export class EmailService {
       </div>
     `;
 
-    const { data, error } = await this.resend.emails.send({
-      from: 'MEDITEK Recetas Médicas <onboarding@resend.dev>',
+    const info = await this.transporter.sendMail({
+      from: '"MEDITEK Recetas Médicas" <' + process.env.BREVO_EMAIL + '>',
       to,
       subject: '📋 Receta Médica - MEDITEK',
       html: htmlContent,
     });
 
-    if (error) throw new Error(`Error enviando correo: ${error.message}`);
     console.log('✅ Receta médica enviada a:', to);
-    return data;
+    return info;
   }
 }
