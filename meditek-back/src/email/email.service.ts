@@ -1,25 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import * as nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 @Injectable()
 export class EmailService {
-  private transporter;
+  private resend: Resend;
 
   constructor() {
-    this.transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false,
-      family: 4,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      }
-    } as any);
+    this.resend = new Resend(process.env.RESEND_API_KEY);
   }
 
   async sendInvoiceEmail(to: string, order: any, pdfBuffer: Buffer) {
-    // Crear el contenido HTML del correo
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #0A6E5E;">¡Gracias por tu compra!</h2>
@@ -31,7 +21,6 @@ export class EmailService {
           <p><strong>N° Orden:</strong> ${order.orderNumber}</p>
           <p><strong>Fecha:</strong> ${new Date(order.createdAt).toLocaleString('es-PE')}</p>
           <p><strong>Total:</strong> S/ ${order.total.toFixed(2)}</p>
-          
           <h4>Productos:</h4>
           <ul>
             ${order.items.map(item => `
@@ -41,11 +30,9 @@ export class EmailService {
         </div>
         
         <p><strong>Dirección de entrega:</strong><br>${order.customerAddress}</p>
-        
         <p>Tu pedido está siendo procesado y será enviado próximamente.</p>
         
         <hr style="margin: 20px 0;">
-        
         <p style="color: #666; font-size: 12px;">
           MEDITEK - Tu salud es nuestra prioridad<br>
           Si tienes alguna consulta, responde a este correo.
@@ -53,30 +40,28 @@ export class EmailService {
       </div>
     `;
 
-    // Enviar el correo
-    const info = await this.transporter.sendMail({
-      from: '"MEDITEK Farmacia" <cris.vera.quispe@gmail.com>',
-      to: to,
+    const { data, error } = await this.resend.emails.send({
+      from: 'MEDITEK Farmacia <onboarding@resend.dev>',
+      to,
       subject: `✅ Comprobante de pago - Orden ${order.orderNumber}`,
       html: htmlContent,
       attachments: [
         {
           filename: `comprobante-${order.orderNumber}.pdf`,
           content: pdfBuffer,
-          contentType: 'application/pdf'
         }
       ]
     });
 
-    console.log('✅ Correo enviado:', info.messageId);
-    return info;
+    if (error) throw new Error(`Error enviando correo: ${error.message}`);
+    console.log('✅ Correo enviado:', data?.id);
+    return data;
   }
 
-  // Método simple para probar el envío de correos
   async sendTestEmail(to: string) {
-    const info = await this.transporter.sendMail({
-      from: '"MEDITEK Farmacia" <cris.vera.quispe@gmail.com>',
-      to: to,
+    const { data, error } = await this.resend.emails.send({
+      from: 'MEDITEK Farmacia <onboarding@resend.dev>',
+      to,
       subject: '🧪 Prueba de correo - MEDITEK',
       html: `
         <h2>¡Correo de prueba!</h2>
@@ -84,64 +69,64 @@ export class EmailService {
         <p>Fecha: ${new Date().toLocaleString()}</p>
       `
     });
-    console.log('✅ Correo de prueba enviado:', info.messageId);
-    return info;
+
+    if (error) throw new Error(`Error enviando correo: ${error.message}`);
+    console.log('✅ Correo de prueba enviado:', data?.id);
+    return data;
   }
 
   async sendPrescriptionEmail(to: string, prescription: any, doctorName: string) {
     const htmlContent = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="text-align: center; margin-bottom: 20px;">
-                <h2 style="color: #0A6E5E;">🏥 HOSPITAL MEDITEK</h2>
-                <h3>RECETA MÉDICA</h3>
-                <div style="border: 2px solid #0A6E5E; padding: 10px; display: inline-block;">
-                    <strong>SELLO OFICIAL</strong>
-                </div>
-            </div>
-            
-            <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                <p><strong>Paciente:</strong> ${prescription.patientName}</p>
-                <p><strong>Fecha:</strong> ${new Date().toLocaleDateString('es-PE')}</p>
-                <p><strong>Médico:</strong> ${doctorName}</p>
-            </div>
-            
-            <div style="margin: 20px 0;">
-                <h3 style="color: #0A6E5E;">💊 Medicamentos</h3>
-                <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px;">
-                    ${prescription.medications.replace(/\n/g, '<br>')}
-                </div>
-            </div>
-            
-            <div style="margin: 20px 0;">
-                <h3 style="color: #0A6E5E;">📋 Instrucciones</h3>
-                <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px;">
-                    ${prescription.instructions.replace(/\n/g, '<br>')}
-                </div>
-            </div>
-            
-            <div style="margin-top: 30px; text-align: center;">
-                <div style="border-top: 1px solid #ccc; padding-top: 20px;">
-                    <p style="font-size: 12px; color: #666;">
-                        Este es un documento médico oficial.<br>
-                        Presente esta receta en la farmacia para su despacho.
-                    </p>
-                    <p style="font-size: 12px; color: #666;">
-                        MEDITEK - Tu salud es nuestra prioridad
-                    </p>
-                </div>
-            </div>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h2 style="color: #0A6E5E;">🏥 HOSPITAL MEDITEK</h2>
+          <h3>RECETA MÉDICA</h3>
+          <div style="border: 2px solid #0A6E5E; padding: 10px; display: inline-block;">
+            <strong>SELLO OFICIAL</strong>
+          </div>
         </div>
+        
+        <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p><strong>Paciente:</strong> ${prescription.patientName}</p>
+          <p><strong>Fecha:</strong> ${new Date().toLocaleDateString('es-PE')}</p>
+          <p><strong>Médico:</strong> ${doctorName}</p>
+        </div>
+        
+        <div style="margin: 20px 0;">
+          <h3 style="color: #0A6E5E;">💊 Medicamentos</h3>
+          <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px;">
+            ${prescription.medications.replace(/\n/g, '<br>')}
+          </div>
+        </div>
+        
+        <div style="margin: 20px 0;">
+          <h3 style="color: #0A6E5E;">📋 Instrucciones</h3>
+          <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px;">
+            ${prescription.instructions.replace(/\n/g, '<br>')}
+          </div>
+        </div>
+        
+        <div style="margin-top: 30px; text-align: center;">
+          <div style="border-top: 1px solid #ccc; padding-top: 20px;">
+            <p style="font-size: 12px; color: #666;">
+              Este es un documento médico oficial.<br>
+              Presente esta receta en la farmacia para su despacho.
+            </p>
+            <p style="font-size: 12px; color: #666;">MEDITEK - Tu salud es nuestra prioridad</p>
+          </div>
+        </div>
+      </div>
     `;
 
-    const info = await this.transporter.sendMail({
-      from: '"MEDITEK Recetas Médicas" <cris.vera.quispe@gmail.com>',
-      to: to,
+    const { data, error } = await this.resend.emails.send({
+      from: 'MEDITEK Recetas Médicas <onboarding@resend.dev>',
+      to,
       subject: '📋 Receta Médica - MEDITEK',
-      html: htmlContent
+      html: htmlContent,
     });
 
+    if (error) throw new Error(`Error enviando correo: ${error.message}`);
     console.log('✅ Receta médica enviada a:', to);
-    return info;
+    return data;
   }
 }
-
