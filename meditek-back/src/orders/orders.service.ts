@@ -144,11 +144,7 @@ export class OrdersService {
 
     async processPayment(orderId: number, paymentData: any) {
         const order = await this.findOne(orderId);
-
-        // Aquí puedes integrar con MercadoPago, Culqi, PayPal, etc.
-        // Por ahora simulamos pago exitoso
-
-        // Simular proceso de pago
+        
         const paymentSuccessful = true;
 
         if (paymentSuccessful) {
