@@ -1,12 +1,20 @@
 import { Injectable } from '@nestjs/common';
-import { Resend } from 'resend';
+import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class EmailService {
-  private resend: Resend;
+  private transporter;
 
   constructor() {
-    this.resend = new Resend(process.env.RESEND_API_KEY);
+    this.transporter = nodemailer.createTransport({
+      host: 'smtp-relay.brevo.com',
+      port: 587,
+      secure: false,
+      auth: {
+        user: process.env.BREVO_EMAIL,    
+        pass: process.env.BREVO_APIKEY    
+      }
+    } as any);
   }
 
   async sendInvoiceEmail(to: string, order: any, pdfBuffer: Buffer) {
