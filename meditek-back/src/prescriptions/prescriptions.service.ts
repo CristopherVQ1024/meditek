@@ -1,15 +1,21 @@
 // src/prescriptions/prescriptions.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class PrescriptionsService {
-    constructor(private prisma: PrismaService) { }
+    constructor(private prisma: PrismaService, private emailService: EmailService) { }
 
     async create(data: any) {
         // Verificar que la consulta existe
         const consultation = await this.prisma.consultation.findUnique({
-            where: { id: data.consultationId }
+            where: { id: data.consultationId },
+            include: {
+                doctor: {
+                    include: { user: true }
+                }
+            }
         });
 
         if (!consultation) {
@@ -26,7 +32,8 @@ export class PrescriptionsService {
             throw new NotFoundException(`Paciente con ID ${data.patientId} no encontrado`);
         }
 
-        return this.prisma.prescription.create({
+        // Crear la receta
+        const prescription = await this.prisma.prescription.create({
             data: {
                 consultationId: data.consultationId,
                 patientId: data.patientId,
@@ -43,8 +50,25 @@ export class PrescriptionsService {
                 patient: { include: { user: true } }
             }
         });
-    }
 
+        // Enviar correo al paciente
+        try {
+            await this.emailService.sendPrescriptionEmail(
+                patient.user.email,
+                {
+                    patientName: patient.user.name,
+                    medications: data.medications,
+                    instructions: data.instructions || 'Tomar según indicación médica'
+                },
+                consultation.doctor.user.name
+            );
+            console.log('✅ Receta enviada por correo a:', patient.user.email);
+        } catch (error) {
+            console.error('❌ Error al enviar correo:', error);
+        }
+
+        return prescription;
+    }
     async findAll() {
         return this.prisma.prescription.findMany({
             include: {

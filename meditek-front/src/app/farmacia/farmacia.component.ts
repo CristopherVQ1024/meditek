@@ -2,7 +2,6 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { HttpClientModule } from '@angular/common/http';
 
 interface Product {
   id: number;
@@ -21,7 +20,7 @@ interface CartItem {
 @Component({
   selector: 'app-farmacia',
   standalone: true,
-  imports: [CommonModule, FormsModule, HttpClientModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './farmacia.component.html',
   styleUrls: ['./farmacia.component.scss']
 })

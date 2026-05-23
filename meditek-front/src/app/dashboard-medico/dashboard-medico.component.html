@@ -28,10 +28,10 @@
                 <span class="icon">💊</span>
                 <span>Tratamientos</span>
             </button>
-            <button (click)="changeTab('referrals')" [class.active]="activeTab === 'referrals'">
+            <!--<button (click)="changeTab('referrals')" [class.active]="activeTab === 'referrals'">
                 <span class="icon">🔄</span>
                 <span>Transferencias</span>
-            </button>
+            </button>-->
             <button (click)="changeTab('appointments')" [class.active]="activeTab === 'appointments'">
                 <span class="icon">📅</span>
                 <span>Citas</span>
@@ -90,7 +90,7 @@
                         <p><span>🩸</span> {{ patient.bloodType }}</p>
                     </div>
                     <div class="patient-actions">
-                        <button class="btn-outline" (click)="openReferralModal(patient)">🔄 Derivar</button>
+                        <!--<button class="btn-outline" (click)="openReferralModal(patient)">🔄 Derivar</button>-->
                         <button class="btn-outline" (click)="openAppointmentModal(patient)">📅 Próxima Cita</button>
                     </div>
                 </div>

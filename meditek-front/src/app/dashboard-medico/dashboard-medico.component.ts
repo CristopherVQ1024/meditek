@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient, HttpClientModule } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 
 
 // Agregar en el componente
@@ -161,7 +161,7 @@ interface Referral {
 @Component({
   selector: 'app-dashboard-medico',
   standalone: true,
-  imports: [CommonModule, FormsModule, HttpClientModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './dashboard-medico.component.html',
   styleUrls: ['./dashboard-medico.component.scss']
 })
