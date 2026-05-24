@@ -1,27 +1,32 @@
 import { Injectable } from '@nestjs/common';
-const SibApiV3Sdk = require('@getbrevo/brevo');
 
 @Injectable()
 export class EmailService {
-  private apiInstance;
-
-  constructor() {
-    const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
-    apiInstance.authentications['apiKey'].apiKey = process.env.BREVO_APIKEY;
-    this.apiInstance = apiInstance;
-  }
 
   private async sendEmail(to: string, subject: string, htmlContent: string, attachments?: any[]) {
-    const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
-    sendSmtpEmail.to = [{ email: to }];
-    sendSmtpEmail.sender = { email: process.env.BREVO_EMAIL, name: 'MEDITEK' };
-    sendSmtpEmail.subject = subject;
-    sendSmtpEmail.htmlContent = htmlContent;
-    if (attachments) sendSmtpEmail.attachment = attachments;
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'api-key': process.env.BREVO_APIKEY!,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        sender: { email: process.env.BREVO_EMAIL, name: 'MEDITEK' },
+        to: [{ email: to }],
+        subject,
+        htmlContent,
+        ...(attachments && { attachment: attachments })
+      })
+    });
 
-    const result = await this.apiInstance.sendTransacEmail(sendSmtpEmail);
-    console.log('✅ Correo enviado:', result.body?.messageId);
-    return result;
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`Error Brevo: ${JSON.stringify(error)}`);
+    }
+
+    const data = await response.json();
+    console.log('✅ Correo enviado:', data.messageId);
+    return data;
   }
 
   async sendInvoiceEmail(to: string, order: any, pdfBuffer: Buffer) {
