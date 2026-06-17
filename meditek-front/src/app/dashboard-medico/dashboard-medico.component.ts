@@ -277,6 +277,10 @@ export class DashboardMedicoComponent implements OnInit {
     this.loadAllData();
   }
 
+  openGLPI(): void {
+    window.open('https://utp.us2.glpi-network.cloud/', '_blank');
+  }
+  
   // dashboard-medico.component.ts
   getDoctorName(): void {
     const user = localStorage.getItem('user');

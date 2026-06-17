@@ -132,6 +132,10 @@ export class DashboardPacienteComponent implements OnInit {
     this.loadUserData();
   }
 
+  openGLPI(): void {
+    window.open('https://utp.us2.glpi-network.cloud/', '_blank');
+  }
+
   loadUserData(): void {
     const user = localStorage.getItem('user');
     if (user) {
