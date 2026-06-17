@@ -2,7 +2,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient} from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 
 // Interfaces
 interface Specialty {
@@ -18,7 +18,7 @@ interface Doctor {
   specialtyId: number;
   specialtyName: string;
   userId: number;
-  user: { 
+  user: {
     id: number;
     name: string;
     email: string;
@@ -87,6 +87,10 @@ export class DashboardComponent implements OnInit {
   ngOnInit(): void {
     this.loadAllData();
     this.getAdminName();
+  }
+
+  openGLPI(): void {
+    window.open('https://utp.us2.glpi-network.cloud/', '_blank');
   }
 
   getAdminName(): void {
