@@ -19,6 +19,7 @@ import { AppointmentsModule } from './appointments/appointments.module';
 import { OrdersModule } from './orders/orders.module';
 import { PdfModule } from './pdf/pdf.module';
 import { EmailModule } from './email/email.module';
+import { MetricsController } from './metrics/metrics.controller';
 
 
 
@@ -26,7 +27,7 @@ import { EmailModule } from './email/email.module';
   imports: [PrismaModule, AuthModule, FirebaseModule, ConfigModule.forRoot({
     isGlobal: true,
   }), AuthModule, SpecialtiesModule, DoctorsModule, ProductsModule, PatientsModule, ConsultationsModule, TreatmentsModule, ReferralsModule, MedicalHistoryModule, PrescriptionsModule, AppointmentsModule, OrdersModule, PdfModule, EmailModule,],
-  controllers: [AppController],
+  controllers: [AppController, MetricsController],
   providers: [
     AppService,
   ],
