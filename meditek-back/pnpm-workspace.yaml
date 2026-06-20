@@ -1,5 +1,8 @@
 allowBuilds:
+  '@datadog/pprof': set this to true or false
   '@firebase/util': false
+  '@newrelic/fn-inspect': set this to true or false
+  '@newrelic/native-metrics': set this to true or false
   '@prisma/client': true
   '@prisma/engines': true
   msgpackr-extract: false
