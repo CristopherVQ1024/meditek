@@ -1,13 +1,18 @@
-import 'newrelic';
+import 'newrelic'; 
 
 import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { Logger } from 'nestjs-pino';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bufferLogs: true, // evita perder logs mientras Pino se inicializa
+  });
+
+  app.useLogger(app.get(Logger)); 
 
   app.enableCors({
     origin: ['https://meditek-front.netlify.app', 'http://localhost:4200'],
