@@ -1,0 +1,33 @@
+name: Backup Neon Database
+
+on:
+  schedule:
+    # Todos los días a las 3:00 UTC
+    - cron: "0 3 * * *"
+
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Instalar cliente PostgreSQL
+        run: |
+          sudo apt update
+          sudo apt install -y postgresql-client
+
+      - name: Crear respaldo
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          mkdir backups
+          pg_dump "$DATABASE_URL" \
+            --format=custom \
+            --file=backups/neon-$(date +%F-%H-%M).backup
+
+      - name: Subir respaldo
+        uses: actions/upload-artifact@v4
+        with:
+          name: respaldo-neon
+          path: backups/
