@@ -1,6 +1,8 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 
+export interface PrismaService extends PrismaClient {}
+
 @Injectable()
 export class PrismaService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrismaService.name);
@@ -10,7 +12,7 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
 
   private usingPrimary = true;
   private healthInterval!: NodeJS.Timeout;
-  private lastFailoverAt: Date | null = null; // marca desde cuándo reconciliar
+  private lastFailoverAt: Date | null = null;
 
   constructor() {
     return new Proxy(this, {
@@ -21,7 +23,7 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
         const active = target.usingPrimary ? target.primary : target.secondary;
         return (active as any)[prop];
       },
-    });
+    }) as PrismaService;
   }
 
   async onModuleInit() {
@@ -48,7 +50,7 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     if (!primaryOk && this.usingPrimary) {
       this.logger.error('❌ Primaria caída. Failover automático a secundaria.');
       this.usingPrimary = false;
-      this.lastFailoverAt = new Date(); // guardamos desde cuándo empezó la caída
+      this.lastFailoverAt = new Date();
     }
   }
 
@@ -62,24 +64,20 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async reconcile() {
-    // Usamos el momento exacto en que cayó la primaria, no una ventana fija de 1 hora
     const since = this.lastFailoverAt ?? new Date(Date.now() - 1000 * 60 * 60);
 
-    // 1. Users (no depende de nada)
     const users = await this.secondary.user.findMany({ where: { updatedAt: { gte: since } } });
     for (const u of users) {
       await this.primary.user.upsert({ where: { id: u.id }, update: u, create: u });
     }
     this.logger.log(`Reconciliados ${users.length} "user"`);
 
-    // 2. Consultations (depende de Patient y Doctor, asumimos que ya existían antes de la caída)
     const consultations = await this.secondary.consultation.findMany({ where: { updatedAt: { gte: since } } });
     for (const c of consultations) {
       await this.primary.consultation.upsert({ where: { id: c.id }, update: c, create: c });
     }
     this.logger.log(`Reconciliadas ${consultations.length} "consultation"`);
 
-    // 3. Orders (depende de User)
     const orders = await this.secondary.order.findMany({ where: { updatedAt: { gte: since } } });
     for (const o of orders) {
       await this.primary.order.upsert({ where: { id: o.id }, update: o, create: o });
