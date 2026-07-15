@@ -27,8 +27,33 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleInit() {
-    await this.primary.$connect().catch(() => this.logger.error('No se pudo conectar a la primaria'));
-    await this.secondary.$connect().catch(() => this.logger.error('No se pudo conectar a la secundaria'));
+    try {
+      await this.primary.$connect();
+      this.logger.log('✅ Conectado a la DB PRIMARIA');
+    } catch {
+      this.logger.error('❌ No se pudo conectar a la primaria');
+    }
+
+    try {
+      await this.secondary.$connect();
+      this.logger.log('✅ Conectado a la DB SECUNDARIA');
+    } catch {
+      this.logger.error('❌ No se pudo conectar a la secundaria');
+    }
+
+    const primaryOk = await this.ping(this.primary);
+    if (primaryOk) {
+      this.logger.warn('🔄 Verificando si hay datos pendientes de reconciliar...');
+      await this.reconcile();
+      this.usingPrimary = true;
+      this.lastFailoverAt = null;
+      this.logger.warn('✅ Reconciliación de arranque completada.');
+    } else {
+      this.usingPrimary = false;
+      this.lastFailoverAt = new Date();
+      this.logger.error('❌ Primaria no disponible al iniciar. Usando secundaria.');
+    }
+
     this.healthInterval = setInterval(() => this.healthCheck(), 5000);
   }
 
